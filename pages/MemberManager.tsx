@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Member, UserRole, SubscriptionPlan } from '../types';
-import { Search, Plus, Edit2, Trash2, Filter, MoreVertical, X, Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Filter, MoreVertical, X, Upload, FileText, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
 import { sendWelcomeEmail } from '../lib/emailService';
 import { membersService } from '../lib/database';
 
@@ -15,6 +15,9 @@ interface MemberManagerProps {
 const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role, logActivity }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [bulkData, setBulkData] = useState('');
   const [bulkImportMode, setBulkImportMode] = useState<'csv' | 'json'>('csv');
@@ -28,6 +31,135 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     plan: SubscriptionPlan.BASIC,
     status: 'active'
   });
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Handle photo upload
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPhotoPreview(base64String);
+        setNewMember({ ...newMember, photo: base64String });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    setNewMember({ ...newMember, photo: undefined });
+  };
+
+  // Handle edit member
+  const handleEditClick = (member: Member) => {
+    setEditingMember(member);
+    setEditPhotoPreview(member.photo || null);
+    setShowEditModal(true);
+  };
+
+  // Handle edit photo upload (for staff)
+  const handleEditPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setEditPhotoPreview(base64String);
+        if (editingMember) {
+          setEditingMember({ ...editingMember, photo: base64String });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveEditPhoto = () => {
+    setEditPhotoPreview(null);
+    if (editingMember) {
+      setEditingMember({ ...editingMember, photo: undefined });
+    }
+  };
+
+  // Handle save edited member
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+
+    // Validate photo is required (if staff, they must upload photo; if admin editing, photo must exist)
+    if (role === UserRole.STAFF && !editingMember.photo) {
+      alert('Photo is required. Please upload a member photo.');
+      return;
+    }
+    if (role === UserRole.SUPER_ADMIN && !editingMember.photo) {
+      alert('Photo is required. Please upload a member photo to complete the update.');
+      return;
+    }
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseKey) {
+        // If staff, only update photo
+        if (role === UserRole.STAFF) {
+          await membersService.update(editingMember.id, {
+            photo: editingMember.photo
+          });
+          logActivity('Update Member Photo', `Updated photo for ${editingMember.fullName}`, 'admin');
+        } else {
+          // If admin, update all fields
+          await membersService.update(editingMember.id, {
+            fullName: editingMember.fullName,
+            email: editingMember.email,
+            phone: editingMember.phone,
+            address: editingMember.address,
+            emergencyContact: editingMember.emergencyContact,
+            plan: editingMember.plan,
+            photo: editingMember.photo,
+            status: editingMember.status
+          });
+          logActivity('Update Member', `Updated information for ${editingMember.fullName}`, 'admin');
+        }
+      }
+
+      // Update local state
+      setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
+      
+      setShowEditModal(false);
+      setEditingMember(null);
+      setEditPhotoPreview(null);
+      alert(role === UserRole.STAFF ? 'Photo updated successfully!' : 'Member information updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating member:', error);
+      alert(`Failed to update member: ${error.message || 'Please try again'}`);
+    }
+  };
 
   const filteredMembers = members.filter(m => 
     m.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -37,6 +169,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate photo is required
+    if (!newMember.photo) {
+      alert('Photo is required. Please upload a member photo to complete registration.');
+      return;
+    }
+    
     const now = new Date();
     const expiry = new Date();
     expiry.setMonth(now.getMonth() + 1);
@@ -46,7 +185,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       ...newMember as any,
       startDate: now.toISOString().split('T')[0],
       expiryDate: expiry.toISOString().split('T')[0],
-      status: 'active'
+      status: 'active',
+      photo: newMember.photo // Ensure photo is included
     };
 
     let createdMember: Member;
@@ -366,7 +506,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
           <table className="w-full text-left">
             <thead>
               <tr className="text-slate-500 text-xs font-bold uppercase tracking-wider bg-slate-50/50">
-                <th className="px-6 py-4">Member Name</th>
+                <th className="px-6 py-4">Member</th>
                 <th className="px-6 py-4">Subscription</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Contact</th>
@@ -377,8 +517,23 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
               {filteredMembers.map((member) => (
                 <tr key={member.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900">{member.fullName}</div>
-                    <div className="text-xs text-slate-400">ID: {member.id}</div>
+                    <div className="flex items-center gap-3">
+                      {member.photo ? (
+                        <img 
+                          src={member.photo} 
+                          alt={member.fullName}
+                          className="w-20 h-20 rounded-full object-cover border-2 border-slate-200"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center">
+                          <User size={32} className="text-slate-400" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-slate-900">{member.fullName}</div>
+                        <div className="text-xs text-slate-400">ID: {member.id}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-700">{member.plan}</span>
@@ -398,7 +553,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                      <button 
+                        onClick={() => handleEditClick(member)}
+                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                        title={role === UserRole.STAFF ? 'Upload Photo' : 'Edit Member'}
+                      >
                         <Edit2 size={16} />
                       </button>
                       <button 
@@ -419,14 +578,67 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       {/* Add Member Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 fade-in duration-200">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h3 className="text-lg font-bold text-slate-900">New Registration</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={24} />
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
+              <h3 className="text-base font-bold text-slate-900">New Registration</h3>
+              <button onClick={() => {
+                setShowAddModal(false);
+                setPhotoPreview(null);
+                setNewMember({
+                  fullName: '',
+                  email: '',
+                  phone: '',
+                  plan: SubscriptionPlan.BASIC,
+                  status: 'active'
+                });
+              }} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAddMember} className="p-6 space-y-4">
+            <form onSubmit={handleAddMember} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {/* Photo Upload Section */}
+              <div className="flex flex-col items-center gap-4 pb-4 border-b border-slate-200">
+                <div className="relative">
+                  {photoPreview ? (
+                    <div className="relative">
+                      <img 
+                        src={photoPreview} 
+                        alt="Preview" 
+                        className="w-40 h-40 rounded-full object-cover border-4 border-rose-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full p-1.5 hover:bg-rose-700 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-40 h-40 rounded-full bg-slate-100 border-4 border-slate-200 flex items-center justify-center">
+                      <User size={60} className="text-slate-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="text-center">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg cursor-pointer hover:bg-rose-700 transition-colors">
+                    <ImageIcon size={18} />
+                    <span className="text-sm font-medium">Upload Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                      required
+                    />
+                  </label>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Max size: 5MB (JPG, PNG) <span className="text-rose-600 font-bold">* Required</span>
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
@@ -473,20 +685,229 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   </select>
                 </div>
               </div>
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors"
-                >
-                  Confirm Registration
-                </button>
+              </div>
+
+              {/* Sticky Footer with Buttons */}
+              <div className="border-t border-slate-200 p-4 bg-white shrink-0">
+                <div className="flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setPhotoPreview(null);
+                      setNewMember({
+                        fullName: '',
+                        email: '',
+                        phone: '',
+                        plan: SubscriptionPlan.BASIC,
+                        status: 'active'
+                      });
+                    }}
+                    className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-2.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors text-sm"
+                  >
+                    Complete Registration
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {showEditModal && editingMember && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
+              <h3 className="text-base font-bold text-slate-900">
+                {role === UserRole.STAFF ? 'Upload Member Photo' : 'Edit Member Information'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingMember(null);
+                  setEditPhotoPreview(null);
+                }} 
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* Photo Upload Section */}
+                <div className="flex flex-col items-center gap-2 pb-3 border-b border-slate-200">
+                  <div className="relative">
+                    {editPhotoPreview ? (
+                      <div className="relative">
+                        <img 
+                          src={editPhotoPreview} 
+                          alt="Preview" 
+                          className="w-36 h-36 rounded-full object-cover border-2 border-rose-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveEditPhoto}
+                          className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-1 hover:bg-rose-700 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-36 h-36 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center">
+                        <User size={48} className="text-slate-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white rounded-lg cursor-pointer hover:bg-rose-700 transition-colors text-xs">
+                      <ImageIcon size={14} />
+                      <span>Upload Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditPhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Max: 5MB {!editPhotoPreview && <span className="text-rose-600 font-bold">* Required</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Admin can edit all fields, Staff can only see read-only info */}
+                {role === UserRole.SUPER_ADMIN ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
+                      <input 
+                        required 
+                        type="text" 
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none" 
+                        value={editingMember.fullName}
+                        onChange={e => setEditingMember({...editingMember, fullName: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Email</label>
+                        <input 
+                          required 
+                          type="email" 
+                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                          value={editingMember.email}
+                          onChange={e => setEditingMember({...editingMember, email: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Phone</label>
+                        <input 
+                          required 
+                          type="tel" 
+                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                          value={editingMember.phone}
+                          onChange={e => setEditingMember({...editingMember, phone: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Address</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                        value={editingMember.address || ''}
+                        onChange={e => setEditingMember({...editingMember, address: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Emergency Contact</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                        value={editingMember.emergencyContact || ''}
+                        onChange={e => setEditingMember({...editingMember, emergencyContact: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Subscription Plan</label>
+                      <select 
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                        value={editingMember.plan}
+                        onChange={e => setEditingMember({...editingMember, plan: e.target.value as SubscriptionPlan})}
+                      >
+                        <option value={SubscriptionPlan.BASIC}>Basic (₵150/mo)</option>
+                        <option value={SubscriptionPlan.PREMIUM}>Premium (₵300/mo)</option>
+                        <option value={SubscriptionPlan.VIP}>VIP (₵1500/6mo)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Status</label>
+                      <select 
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                        value={editingMember.status}
+                        onChange={e => setEditingMember({...editingMember, status: e.target.value as 'active' | 'expiring' | 'expired'})}
+                      >
+                        <option value="active">Active</option>
+                        <option value="expiring">Expiring</option>
+                        <option value="expired">Expired</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 bg-slate-50 p-3 rounded-lg">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-0.5">Full Name</label>
+                      <p className="text-xs text-slate-900 font-medium">{editingMember.fullName}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-0.5">Email</label>
+                        <p className="text-xs text-slate-900">{editingMember.email}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-0.5">Phone</label>
+                        <p className="text-xs text-slate-900">{editingMember.phone}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-0.5">Plan</label>
+                      <p className="text-xs text-slate-900">{editingMember.plan}</p>
+                    </div>
+                    <p className="text-[10px] text-slate-500 italic mt-2">
+                      Staff members can only upload photos. Contact an admin to edit other information.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Footer with Buttons */}
+              <div className="border-t border-slate-200 p-4 bg-white shrink-0">
+                <div className="flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingMember(null);
+                      setEditPhotoPreview(null);
+                    }}
+                    className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-2.5 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-colors text-sm"
+                  >
+                    {role === UserRole.STAFF ? 'Save Photo' : 'Complete Registration'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

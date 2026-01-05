@@ -58,6 +58,7 @@ export interface Member {
   startDate: string;
   expiryDate: string;
   status: 'active' | 'expiring' | 'expired';
+  photo?: string; // Base64 encoded image or URL
 }
 
 export interface StaffMember {
@@ -88,6 +89,7 @@ export interface PaymentRecord {
   memberEmail?: string;
   memberPhone?: string;
   memberAddress?: string;
+  memberPhoto?: string; // Photo for pending member registration
   memberPlan?: SubscriptionPlan;
   memberStartDate?: string;
   memberExpiryDate?: string;

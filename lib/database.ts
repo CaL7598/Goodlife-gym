@@ -400,7 +400,8 @@ function mapMemberFromDB(db: any): Member {
     plan: db.plan as SubscriptionPlan,
     startDate: db.start_date,
     expiryDate: db.expiry_date,
-    status: db.status
+    status: db.status,
+    photo: db.photo
   };
 }
 
@@ -415,6 +416,7 @@ function mapMemberToDB(member: Partial<Member>): any {
   if (member.startDate !== undefined) db.start_date = member.startDate;
   if (member.expiryDate !== undefined) db.expiry_date = member.expiryDate;
   if (member.status !== undefined) db.status = member.status;
+  if (member.photo !== undefined) db.photo = member.photo;
   return db;
 }
 
@@ -461,6 +463,7 @@ function mapPaymentFromDB(db: any): PaymentRecord {
     memberEmail: db.member_email,
     memberPhone: db.member_phone,
     memberAddress: db.member_address,
+    memberPhoto: db.member_photo,
     memberPlan: db.member_plan,
     memberStartDate: db.member_start_date,
     memberExpiryDate: db.member_expiry_date
@@ -491,6 +494,9 @@ function mapPaymentToDB(payment: Partial<PaymentRecord>): any {
   }
   if (payment.memberAddress !== undefined && payment.memberAddress !== null && payment.memberAddress !== '') {
     db.member_address = payment.memberAddress;
+  }
+  if (payment.memberPhoto !== undefined && payment.memberPhoto !== null && payment.memberPhoto !== '') {
+    db.member_photo = payment.memberPhoto;
   }
   if (payment.memberPlan !== undefined && payment.memberPlan !== null && payment.memberPlan !== '') {
     db.member_plan = payment.memberPlan;

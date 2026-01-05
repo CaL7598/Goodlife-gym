@@ -377,6 +377,25 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Check if staff is on shift and warn them
+    if (userRole === UserRole.STAFF && isOnShift) {
+      const confirmLogout = window.confirm(
+        '⚠️ WARNING: You are currently on shift!\n\n' +
+        'You must sign out from your shift before logging out.\n\n' +
+        'Would you like to:\n' +
+        '• Click "Cancel" to sign out from shift first\n' +
+        '• Click "OK" to logout anyway (NOT RECOMMENDED)'
+      );
+      
+      if (!confirmLogout) {
+        // User cancelled - they should sign out from shift first
+        return;
+      }
+      
+      // User confirmed logout even though on shift - log this as a warning
+      logActivity('Logout Warning', 'Staff member logged out while still on shift', 'access');
+    }
+    
     logActivity('Logout', 'User signed out of the portal', 'access');
     setUserRole(UserRole.PUBLIC);
     setUserEmail('');

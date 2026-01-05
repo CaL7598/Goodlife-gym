@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   UserCircle,
   Play,
-  Square
+  Square,
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -95,7 +97,27 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           </ul>
         </nav>
 
-        <div className="p-3 border-t border-slate-800">
+        <div className="p-3 border-t border-slate-800 space-y-2">
+          {/* Shift Status Indicator for Staff */}
+          {role === UserRole.STAFF && (
+            <div className={`px-3 py-2 rounded-lg text-xs font-bold text-center ${
+              isOnShift 
+                ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800' 
+                : 'bg-amber-900/30 text-amber-400 border border-amber-800'
+            }`}>
+              {isOnShift ? (
+                <span className="flex items-center justify-center gap-1.5">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                  ON SHIFT
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-1.5">
+                  <AlertTriangle size={12} />
+                  NOT ON SHIFT
+                </span>
+              )}
+            </div>
+          )}
           <button
             onClick={onLogout}
             className="w-full flex items-center p-3 rounded-lg text-slate-400 hover:bg-rose-900/20 hover:text-rose-400 transition-colors"
@@ -157,6 +179,39 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             </div>
           </div>
         </header>
+
+        {/* Shift Prompt Banner - Only for Staff */}
+        {role === UserRole.STAFF && !isOnShift && (
+          <div className="bg-amber-500 border-b-4 border-amber-600 shadow-lg">
+            <div className="max-w-7xl mx-auto px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-amber-600 rounded-full p-2">
+                    <AlertTriangle className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                      <Clock size={20} />
+                      Action Required: Start Your Shift
+                    </h3>
+                    <p className="text-amber-100 text-sm mt-1">
+                      Please click "SIGN IN FOR SHIFT" in the header to begin tracking your work hours.
+                    </p>
+                  </div>
+                </div>
+                {onShiftSignIn && (
+                  <button
+                    onClick={onShiftSignIn}
+                    className="flex items-center gap-2 px-6 py-3 bg-white text-amber-600 rounded-lg font-bold hover:bg-amber-50 transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+                  >
+                    <Play size={18} fill="currentColor" />
+                    START SHIFT NOW
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Content */}
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50">

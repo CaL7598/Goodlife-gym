@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SubscriptionPlan, PaymentMethod, PaymentStatus } from '../types';
-import { ArrowLeft, CreditCard, Smartphone, X, CheckCircle2, AlertCircle, Copy, Check } from 'lucide-react';
+import { ArrowLeft, CreditCard, Smartphone, X, CheckCircle2, AlertCircle, Copy, Check, Image as ImageIcon, User } from 'lucide-react';
 import { paymentsService } from '../lib/database';
 import { MOBILE_MONEY_NUMBER } from '../constants';
 
@@ -21,8 +21,10 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
     fullName: '',
     email: '',
     phone: '',
-    address: ''
+    address: '',
+    photo: '' as string | undefined
   });
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [paymentData, setPaymentData] = useState({
     method: PaymentMethod.MOMO as PaymentMethod,
     transactionId: '',
@@ -54,10 +56,45 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
 
   const planPrice = parseFloat(selectedPlan.price);
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPhotoPreview(base64String);
+        setMemberData({ ...memberData, photo: base64String });
+        setError('');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    setMemberData({ ...memberData, photo: undefined });
+  };
+
   const handleMemberSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!memberData.fullName || !memberData.email || !memberData.phone) {
       setError('Please fill in all required fields');
+      return;
+    }
+    if (!memberData.photo) {
+      setError('Please upload your photo. Photo is required for registration.');
       return;
     }
     setError('');
@@ -99,6 +136,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
         memberEmail: memberData.email, // Store email for member creation later
         memberPhone: memberData.phone,
         memberAddress: memberData.address,
+        memberPhoto: memberData.photo, // Store photo for member creation
         memberPlan: selectedPlan.name,
         memberStartDate: now.toISOString().split('T')[0],
         memberExpiryDate: expiry.toISOString().split('T')[0],
@@ -227,6 +265,52 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
               <form onSubmit={handleMemberSubmit} className="space-y-6">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 mb-4">Member Information</h2>
+                  
+                  {/* Photo Upload Section */}
+                  <div className="mb-6 pb-6 border-b border-slate-200">
+                    <label className="block text-sm font-medium text-slate-700 mb-3">
+                      Profile Photo <span className="text-rose-600">*</span>
+                    </label>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative">
+                        {photoPreview ? (
+                          <div className="relative">
+                            <img 
+                              src={photoPreview} 
+                              alt="Preview" 
+                              className="w-40 h-40 rounded-full object-cover border-4 border-rose-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleRemovePhoto}
+                              className="absolute -top-2 -right-2 bg-rose-600 text-white rounded-full p-1.5 hover:bg-rose-700 transition-colors"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-40 h-40 rounded-full bg-slate-100 border-4 border-slate-200 flex items-center justify-center">
+                            <User size={60} className="text-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <label className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg cursor-pointer hover:bg-rose-700 transition-colors">
+                          <ImageIcon size={18} />
+                          <span className="text-sm font-medium">Upload Photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                            required
+                          />
+                        </label>
+                        <p className="text-xs text-slate-500 mt-2">Max size: 5MB (JPG, PNG) - Required</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-slate-700 mb-1">

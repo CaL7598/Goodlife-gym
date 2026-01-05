@@ -41,6 +41,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
           email: pay.memberEmail,
           phone: pay.memberPhone || '',
           address: pay.memberAddress,
+          photo: pay.memberPhoto, // Include photo from payment record
           plan: (pay.memberPlan || SubscriptionPlan.BASIC) as SubscriptionPlan,
           startDate: pay.memberStartDate || new Date().toISOString().split('T')[0],
           expiryDate: pay.memberExpiryDate || new Date().toISOString().split('T')[0],

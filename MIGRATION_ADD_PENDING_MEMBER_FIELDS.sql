@@ -15,6 +15,9 @@ ALTER TABLE payments
 ADD COLUMN IF NOT EXISTS member_address TEXT;
 
 ALTER TABLE payments 
+ADD COLUMN IF NOT EXISTS member_photo TEXT;
+
+ALTER TABLE payments 
 ADD COLUMN IF NOT EXISTS member_plan TEXT CHECK (member_plan IN ('Basic', 'Premium', 'VIP'));
 
 ALTER TABLE payments 
@@ -32,6 +35,7 @@ AND column_name IN (
   'member_email',
   'member_phone',
   'member_address',
+  'member_photo',
   'member_plan',
   'member_start_date',
   'member_expiry_date'
