@@ -6,7 +6,11 @@
  * 
  * In development, Vite proxy forwards /api/* requests to the backend server.
  * In production, set VITE_API_URL to your deployed backend URL.
+ * 
+ * This service also sends SMS via Twilio when emails are sent.
  */
+
+import { sendWelcomeSMS, sendPaymentSMS, sendMessageSMS } from './smsService';
 
 // Use relative URL for Vite proxy in development, or absolute URL in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
@@ -14,6 +18,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' :
 export interface WelcomeEmailParams {
   memberName: string;
   memberEmail: string;
+  memberPhone?: string; // Phone number for SMS
   plan: string;
   startDate: string;
   expiryDate: string;
@@ -22,6 +27,7 @@ export interface WelcomeEmailParams {
 export interface PaymentEmailParams {
   memberName: string;
   memberEmail: string;
+  memberPhone?: string; // Phone number for SMS
   amount: number;
   paymentMethod: string;
   paymentDate: string;
@@ -32,13 +38,14 @@ export interface PaymentEmailParams {
 export interface MessageEmailParams {
   memberName: string;
   memberEmail: string;
+  memberPhone?: string; // Phone number for SMS
   subject: string;
   message: string;
   messageType?: 'welcome' | 'reminder' | 'expiry' | 'general';
 }
 
 /**
- * Send welcome email to new member
+ * Send welcome email to new member (and SMS if phone number provided)
  */
 export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<boolean> => {
   try {
@@ -64,6 +71,23 @@ export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<bool
 
     const data = await response.json();
     console.log('Welcome email sent successfully to', params.memberEmail, data);
+
+    // Also send SMS if phone number is provided
+    if (params.memberPhone) {
+      try {
+        await sendWelcomeSMS({
+          memberName: params.memberName,
+          memberPhone: params.memberPhone,
+          plan: params.plan,
+          startDate: params.startDate,
+          expiryDate: params.expiryDate,
+        });
+      } catch (smsError) {
+        console.warn('Failed to send welcome SMS (email was sent):', smsError);
+        // Don't fail the whole operation if SMS fails
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('Error sending welcome email:', error);
@@ -72,7 +96,7 @@ export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<bool
 };
 
 /**
- * Send payment confirmation email
+ * Send payment confirmation email (and SMS if phone number provided)
  */
 export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<boolean> => {
   try {
@@ -100,6 +124,25 @@ export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<bool
 
     const data = await response.json();
     console.log('Payment confirmation email sent successfully to', params.memberEmail, data);
+
+    // Also send SMS if phone number is provided
+    if (params.memberPhone) {
+      try {
+        await sendPaymentSMS({
+          memberName: params.memberName,
+          memberPhone: params.memberPhone,
+          amount: params.amount,
+          paymentMethod: params.paymentMethod,
+          paymentDate: params.paymentDate,
+          transactionId: params.transactionId,
+          expiryDate: params.expiryDate,
+        });
+      } catch (smsError) {
+        console.warn('Failed to send payment SMS (email was sent):', smsError);
+        // Don't fail the whole operation if SMS fails
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('Error sending payment email:', error);
@@ -108,7 +151,7 @@ export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<bool
 };
 
 /**
- * Send general message email to member
+ * Send general message email to member (and SMS if phone number provided)
  */
 export const sendMessageEmail = async (params: MessageEmailParams): Promise<{ success: boolean; error?: any }> => {
   try {
@@ -143,6 +186,22 @@ export const sendMessageEmail = async (params: MessageEmailParams): Promise<{ su
 
     const data = await response.json();
     console.log('Message email sent successfully to', params.memberEmail, data);
+
+    // Also send SMS if phone number is provided
+    if (params.memberPhone) {
+      try {
+        await sendMessageSMS({
+          memberName: params.memberName,
+          memberPhone: params.memberPhone,
+          message: params.message,
+          messageType: params.messageType,
+        });
+      } catch (smsError) {
+        console.warn('Failed to send message SMS (email was sent):', smsError);
+        // Don't fail the whole operation if SMS fails
+      }
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error('Error sending message email:', error);
@@ -159,6 +218,7 @@ export const sendMessageEmail = async (params: MessageEmailParams): Promise<{ su
 
 /**
  * Send message email to multiple recipients (for broadcast)
+ * Also sends SMS to recipients with phone numbers
  */
 export const sendBulkMessageEmails = async (recipients: MessageEmailParams[]): Promise<{ success: number; failed: number }> => {
   let success = 0;

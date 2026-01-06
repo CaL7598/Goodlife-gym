@@ -1,6 +1,13 @@
 
 import React from 'react';
 import { ShieldCheck, Target, Users2 } from 'lucide-react';
+import ImageSlideshow from '../components/ImageSlideshow';
+
+// Dynamically import all images from the "our story" folder using Vite's import.meta.glob
+const storyImageModules = import.meta.glob('../our story/*.{jpg,jpeg,png}', { eager: true });
+const storyImages = Object.values(storyImageModules).map((module: any) => 
+  typeof module === 'string' ? module : module.default || module
+) as string[];
 
 const About: React.FC = () => {
   return (
@@ -10,14 +17,29 @@ const About: React.FC = () => {
           <div>
             <h2 className="text-4xl font-extrabold text-slate-900 mb-6 leading-tight">Our Story</h2>
             <p className="text-slate-600 leading-relaxed mb-6">
-              Founded in 2018, Goodlife Fitness began with a single mission: to provide a high-quality fitness experience that is accessible to everyone. We believed that a gym shouldn't just be a place to sweat, but a sanctuary for mental and physical growth.
+              Founded in <strong>January 2014</strong>, Goodlife Fitness Ghana is a dynamic fitness community dedicated to empowering individuals on their wellness journeys. We have two locations, the <strong>Sunyani Airport Branch</strong> and <strong>Wamfie Branch</strong>, in the Bono Region, and also the upcoming <strong>Sunyani Baakoniaba Branch</strong>.
             </p>
-            <p className="text-slate-600 leading-relaxed">
-              Today, we serve over 2,000 members with state-of-the-art facilities across three locations. Our team of certified professionals is dedicated to maintaining an environment where every member feels supported, motivated, and empowered.
+            <p className="text-slate-600 leading-relaxed mb-6">
+              We offer <strong>Personal Training</strong>, <strong>Aerobics Classes</strong>, <strong>Bodybuilding</strong> and <strong>Small Group Classes</strong> to help you improve your health & fitness so you can live a good life. Goodlife Fitness Ghana welcomes all ages and fitness abilities. Our classes are structured so that no matter your level of fitness and experience, you get a perfect workout for you.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-6">
+              Goodlife Fitness Ghana is to give every person in Ghana the opportunity to live a fit and healthy good life.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              Please check out our intro offers or phone us to kick off your fitness journey!
+            </p>
+            <p className="text-2xl font-bold text-rose-600 italic mt-6">
+              DO IT FOR YOUR GOOD LIFE.
             </p>
           </div>
-          <div className="rounded-3xl overflow-hidden shadow-2xl rotate-2">
-            <img src="https://picsum.photos/800/600?random=about" alt="Gym Team" className="w-full h-full object-cover" />
+          <div className="group rotate-2">
+            <ImageSlideshow 
+              images={storyImages}
+              autoPlay={true}
+              autoPlayInterval={5000}
+              showControls={true}
+              showIndicators={true}
+            />
           </div>
         </div>
 
@@ -27,21 +49,21 @@ const About: React.FC = () => {
               <ShieldCheck className="text-rose-600" size={32} />
             </div>
             <h3 className="text-xl font-bold mb-3">Our Mission</h3>
-            <p className="text-slate-500 text-sm leading-relaxed">To inspire health and wellness through professional guidance and premium facilities.</p>
+            <p className="text-slate-500 text-sm leading-relaxed">To give every person in Ghana the opportunity to live a fit and healthy good life.</p>
           </div>
           <div className="bg-slate-50 p-10 rounded-3xl text-center">
              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
               <Target className="text-rose-600" size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-3">Our Vision</h3>
-            <p className="text-slate-500 text-sm leading-relaxed">To be the leading fitness community known for transforming lives and fostering strength.</p>
+            <h3 className="text-xl font-bold mb-3">Our Services</h3>
+            <p className="text-slate-500 text-sm leading-relaxed">Personal Training, Aerobics Classes, Bodybuilding, and Small Group Classes tailored to all fitness levels.</p>
           </div>
           <div className="bg-slate-50 p-10 rounded-3xl text-center">
              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
               <Users2 className="text-rose-600" size={32} />
             </div>
             <h3 className="text-xl font-bold mb-3">Our Community</h3>
-            <p className="text-slate-500 text-sm leading-relaxed">A diverse family of individuals striving together towards their personal best.</p>
+            <p className="text-slate-500 text-sm leading-relaxed">A dynamic fitness community welcoming all ages and fitness abilities across the Bono Region.</p>
           </div>
         </div>
       </div>

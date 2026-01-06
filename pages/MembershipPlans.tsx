@@ -16,26 +16,47 @@ interface MembershipPlansProps {
 const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selectedPlan, onPlanSelect }) => {
   const plans = [
     {
-      name: 'Basic',
-      price: '150',
+      name: 'Monthly',
+      price: '140',
       period: 'Month',
-      features: ['Access during peak hours', 'Basic weight room access', '1 Fitness assessment', 'Locker access'],
-      color: 'slate',
-      recommended: false
-    },
-    {
-      name: 'Premium',
-      price: '300',
-      period: 'Month',
-      features: ['24/7 Full Access', 'All group classes included', 'Pool & Sauna access', 'Monthly PT session', 'Guest passes'],
+      registrationFee: '100',
+      features: ['Full gym access', 'All equipment access', 'Group classes included', 'Locker access'],
       color: 'rose',
       recommended: true
     },
     {
-      name: 'VIP',
-      price: '1,500',
-      period: '6 Months',
-      features: ['Full Premium benefits', 'Private locker & laundry', 'Nutritional planning', 'Unlimited PT sessions', 'Complimentary supplements'],
+      name: '2 Weeks',
+      price: '100',
+      period: '2 Weeks',
+      registrationFee: '100',
+      features: ['Full gym access', 'All equipment access', 'Group classes included', 'Locker access'],
+      color: 'slate',
+      recommended: false
+    },
+    {
+      name: '1 Week',
+      price: '70',
+      period: 'Week',
+      registrationFee: '100',
+      features: ['Full gym access', 'All equipment access', 'Group classes included', 'Locker access'],
+      color: 'slate',
+      recommended: false
+    },
+    {
+      name: 'Day Morning',
+      price: '25',
+      period: 'Day',
+      registrationFee: '0',
+      features: ['Morning workout access', 'All equipment access', '5:00 AM - 11:00 AM'],
+      color: 'slate',
+      recommended: false
+    },
+    {
+      name: 'Day Evening',
+      price: '25',
+      period: 'Day',
+      registrationFee: '0',
+      features: ['Evening workout access', 'All equipment access', '4:00 PM - 8:00 PM'],
       color: 'slate',
       recommended: false
     }
@@ -47,9 +68,10 @@ const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selec
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-slate-900 mb-4">Choose Your Plan</h2>
           <p className="text-slate-600">Flexible options tailored to your fitness lifestyle.</p>
+          <p className="text-sm text-slate-500 mt-2">Registration Fee: <span className="font-bold text-rose-600">₵100</span> (one-time, not applicable for day passes)</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {plans.map((plan) => (
             <div 
               key={plan.name} 
@@ -64,10 +86,15 @@ const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selec
               )}
               <div className="p-8">
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
-                <div className="flex items-baseline mb-6">
+                <div className="flex items-baseline mb-2">
                   <span className="text-4xl font-bold">₵{plan.price}</span>
                   <span className="text-slate-500 ml-1">/{plan.period}</span>
                 </div>
+                {plan.registrationFee !== '0' && (
+                  <p className="text-sm text-slate-500 mb-4">
+                    + Registration: <span className="font-semibold text-rose-600">₵{plan.registrationFee}</span>
+                  </p>
+                )}
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3 text-slate-600 text-sm">

@@ -44,6 +44,25 @@ export const membersService = {
     return data ? mapMemberFromDB(data) : null;
   },
 
+  async getByEmail(email: string): Promise<Member | null> {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    if (error) {
+      // If no rows found, that's fine - member doesn't exist
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Error fetching member by email:', error);
+      return null;
+    }
+    
+    return data ? mapMemberFromDB(data) : null;
+  },
+
   async create(member: Omit<Member, 'id'>): Promise<Member> {
     const { data, error } = await supabase
       .from('members')
@@ -116,6 +135,25 @@ export const staffService = {
     
     if (error) {
       console.error('Error fetching staff:', error);
+      return null;
+    }
+    
+    return data ? mapStaffFromDB(data) : null;
+  },
+
+  async authenticate(email: string, password: string): Promise<StaffMember | null> {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('email', email)
+      .eq('password', password)
+      .single();
+    
+    if (error) {
+      // Don't log error for invalid credentials (security best practice)
+      if (error.code !== 'PGRST116') {
+        console.error('Error authenticating staff:', error);
+      }
       return null;
     }
     
@@ -388,6 +426,66 @@ export const attendanceService = {
   }
 };
 
+// Client Check-Ins
+export const clientCheckInService = {
+  async getAll(): Promise<ClientCheckIn[]> {
+    const { data, error } = await supabase
+      .from('client_checkins')
+      .select('*')
+      .order('check_in_time', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching client check-ins:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapClientCheckInFromDB);
+  },
+
+  async create(checkIn: Omit<ClientCheckIn, 'id'>): Promise<ClientCheckIn> {
+    const { data, error } = await supabase
+      .from('client_checkins')
+      .insert(mapClientCheckInToDB(checkIn))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating client check-in:', error);
+      throw error;
+    }
+    
+    return mapClientCheckInFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<ClientCheckIn>): Promise<ClientCheckIn> {
+    const { data, error } = await supabase
+      .from('client_checkins')
+      .update(mapClientCheckInToDB(updates as ClientCheckIn))
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating client check-in:', error);
+      throw error;
+    }
+    
+    return mapClientCheckInFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('client_checkins')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting client check-in:', error);
+      throw error;
+    }
+  }
+};
+
 // Mapper functions to convert between DB format and app format
 function mapMemberFromDB(db: any): Member {
   return {
@@ -585,6 +683,31 @@ function mapAttendanceToDB(record: Partial<AttendanceRecord>): any {
   if (record.date !== undefined) db.date = record.date;
   if (record.signInTime !== undefined) db.sign_in_time = record.signInTime;
   if (record.signOutTime !== undefined) db.sign_out_time = record.signOutTime;
+  return db;
+}
+
+function mapClientCheckInFromDB(db: any): ClientCheckIn {
+  return {
+    id: db.id,
+    fullName: db.full_name,
+    phone: db.phone,
+    email: db.email,
+    checkInTime: db.check_in_time,
+    checkOutTime: db.check_out_time,
+    date: db.date,
+    notes: db.notes
+  };
+}
+
+function mapClientCheckInToDB(checkIn: Partial<ClientCheckIn>): any {
+  const db: any = {};
+  if (checkIn.fullName !== undefined) db.full_name = checkIn.fullName;
+  if (checkIn.phone !== undefined) db.phone = checkIn.phone;
+  if (checkIn.email !== undefined) db.email = checkIn.email;
+  if (checkIn.checkInTime !== undefined) db.check_in_time = checkIn.checkInTime;
+  if (checkIn.checkOutTime !== undefined) db.check_out_time = checkIn.checkOutTime;
+  if (checkIn.date !== undefined) db.date = checkIn.date;
+  if (checkIn.notes !== undefined) db.notes = checkIn.notes;
   return db;
 }
 

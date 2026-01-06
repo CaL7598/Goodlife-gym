@@ -1,12 +1,14 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Member } from '../types';
 import { Send, MessageSquare, Mail, History, Users, CheckSquare, Square } from 'lucide-react';
 // AI Auto-Draft feature disabled
 // import { generateCommunication } from '../geminiService';
 import { sendMessageEmail, sendBulkMessageEmails } from '../lib/emailService';
+import { useToast } from '../contexts/ToastContext';
 
 const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
+  const { showSuccess, showError } = useToast();
   const [sendMode, setSendMode] = useState<'single' | 'broadcast'>('single');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
@@ -16,6 +18,14 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   // AI Auto-Draft feature disabled
   // const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+
+  // Clear form fields on component mount (page refresh)
+  useEffect(() => {
+    setSelectedMemberId('');
+    setSelectedMemberIds(new Set());
+    setSelectAll(false);
+    setMessage('');
+  }, []);
 
   const selectedMember = members.find(m => m.id === selectedMemberId);
 
@@ -78,6 +88,7 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
         const result = await sendMessageEmail({
           memberName: selectedMember.fullName,
           memberEmail: selectedMember.email,
+          memberPhone: selectedMember.phone, // Include phone for SMS
           subject: subject,
           message: message,
           messageType: msgType
@@ -96,23 +107,21 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
         setMessage('');
         
         if (result.success) {
-          alert(`Email sent successfully to ${selectedMember.fullName}`);
+          showSuccess(`Email and SMS sent successfully to ${selectedMember.fullName}`);
         } else {
           const error = result.error;
           const errorMsg = error?.error || error?.message || 'Unknown error';
-          const suggestion = error?.suggestion || '';
-          const help = error?.help || '';
-          alert(`Failed to send email to ${selectedMember.fullName}.\n\nError: ${errorMsg}${suggestion ? `\n\n${suggestion}` : ''}${help ? `\n\n${help}` : ''}\n\nCheck the browser console and server terminal for more details.`);
+          showError(`Failed to send email to ${selectedMember.fullName}: ${errorMsg}`);
         }
       } catch (error: any) {
         console.error('Email sending error:', error);
         const errorMsg = error?.message || 'Failed to send email';
-        alert(`Failed to send email to ${selectedMember.fullName}.\n\nError: ${errorMsg}\n\nCheck the browser console and server terminal for more details.`);
+        showError(`Failed to send email to ${selectedMember.fullName}: ${errorMsg}`);
       }
     } else {
       // Broadcast mode
       if (selectedMemberIds.size === 0 && !selectAll) {
-        alert("Please select at least one member or select all members.");
+        showError("Please select at least one member or select all members.");
         return;
       }
 
@@ -124,6 +133,7 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
         .map(member => ({
           memberName: member.fullName,
           memberEmail: member.email,
+          memberPhone: member.phone, // Include phone for SMS
           subject: getSubjectForType(msgType, member.fullName),
           message: message,
           messageType: msgType as 'welcome' | 'reminder' | 'expiry' | 'general'
@@ -149,9 +159,9 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
       setSelectAll(false);
       
       if (failed === 0) {
-        alert(`Emails sent successfully to ${success} member(s)`);
+        showSuccess(`Emails and SMS sent successfully to ${success} member(s)`);
       } else {
-        alert(`Emails sent to ${success} member(s), ${failed} failed. Please check the console for details.`);
+        showError(`Emails sent to ${success} member(s), ${failed} failed. Please check the console for details.`);
       }
     }
   };

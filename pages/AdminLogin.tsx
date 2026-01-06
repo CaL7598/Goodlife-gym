@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
 import { Lock, Shield, User, Dumbbell, AlertTriangle } from 'lucide-react';
+import { staffService } from '../lib/database';
 
 interface LoginProps {
   onLogin: (role: UserRole, email: string) => void;
@@ -12,19 +13,55 @@ const AdminLogin: React.FC<LoginProps> = ({ onLogin, logActivity }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Clear form fields on component mount (page refresh)
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+    setError('');
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin@goodlife.com' && password === 'admin123') {
-      onLogin(UserRole.SUPER_ADMIN, email);
-      // We log activity manually here because state in App.tsx hasn't updated yet to get userEmail/Role from props for the useCallback
-      // So we use a special variant or just ensure logActivity handles current params
-      logActivity('Portal Login', `Super Admin (${email}) logged in successfully`, 'access');
-    } else if (email === 'staff@goodlife.com' && password === 'staff123') {
-      onLogin(UserRole.STAFF, email);
-      logActivity('Portal Login', `Staff Member (${email}) logged in successfully`, 'access');
-    } else {
-      setError('Invalid credentials. Use admin@goodlife.com (admin123) or staff@goodlife.com (staff123).');
+    setError('');
+    setIsLoading(true);
+
+    try {
+      // Check Supabase first for staff authentication
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseKey) {
+        const staffMember = await staffService.authenticate(email, password);
+        
+        if (staffMember) {
+          onLogin(staffMember.role, email);
+          logActivity('Portal Login', `${staffMember.role === UserRole.SUPER_ADMIN ? 'Super Admin' : 'Staff Member'} (${email}) logged in successfully`, 'access');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Fallback to hardcoded credentials for backward compatibility
+      if (email === 'admin@goodlife.com' && password === 'admin123') {
+        onLogin(UserRole.SUPER_ADMIN, email);
+        logActivity('Portal Login', `Super Admin (${email}) logged in successfully`, 'access');
+        setIsLoading(false);
+        return;
+      } else if (email === 'staff@goodlife.com' && password === 'staff123') {
+        onLogin(UserRole.STAFF, email);
+        logActivity('Portal Login', `Staff Member (${email}) logged in successfully`, 'access');
+        setIsLoading(false);
+        return;
+      }
+
+      setError('Invalid credentials. Please check your email and password.');
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,9 +117,10 @@ const AdminLogin: React.FC<LoginProps> = ({ onLogin, logActivity }) => {
 
             <button 
               type="submit"
-              className="w-full py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
+              disabled={isLoading}
+              className="w-full py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign In to Dashboard
+              {isLoading ? 'Signing In...' : 'Sign In to Dashboard'}
             </button>
           </form>
 

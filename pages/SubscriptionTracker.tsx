@@ -2,8 +2,10 @@
 import React, { useMemo } from 'react';
 import { Member, UserRole } from '../types';
 import { Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: UserRole; logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void }> = ({ members, setMembers, role, logActivity }) => {
+  const { showSuccess } = useToast();
   
   const sortedMembers = useMemo(() => {
     return [...members].sort((a, b) => {
@@ -26,7 +28,7 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
     } : m));
 
     logActivity('Manual Renewal', `Extended subscription for ${member?.fullName} until ${expiry.toISOString().split('T')[0]}`, 'admin');
-    alert("Subscription renewed! Automatic confirmation message simulated.");
+    showSuccess(`Subscription renewed successfully for ${member?.fullName}!`);
   };
 
   return (

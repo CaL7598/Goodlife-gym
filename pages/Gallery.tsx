@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // Dynamically import all images using Vite's import.meta.glob
-const imageModules = import.meta.glob('../images/*.jpg', { eager: true });
+// Include jpg, jpeg, and png formats
+const imageModules = import.meta.glob('../images/*.{jpg,jpeg,png}', { eager: true });
 const allImages = Object.values(imageModules).map((module: any) => 
   typeof module === 'string' ? module : module.default || module
 ) as string[];

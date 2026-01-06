@@ -31,6 +31,12 @@ export enum Privilege {
 }
 
 export enum SubscriptionPlan {
+  MONTHLY = 'Monthly',
+  TWO_WEEKS = '2 Weeks',
+  ONE_WEEK = '1 Week',
+  DAY_MORNING = 'Day Morning',
+  DAY_EVENING = 'Day Evening',
+  // Legacy plans for backward compatibility
   BASIC = 'Basic',
   PREMIUM = 'Premium',
   VIP = 'VIP'
@@ -126,6 +132,17 @@ export interface AttendanceRecord {
   date: string;
   signInTime: string;
   signOutTime?: string;
+}
+
+export interface ClientCheckIn {
+  id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  checkInTime: string;
+  checkOutTime?: string;
+  date: string;
+  notes?: string;
 }
 
 export interface AppState {

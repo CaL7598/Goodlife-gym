@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Member, UserRole, SubscriptionPlan } from '../types';
 import { Search, Plus, Edit2, Trash2, Filter, MoreVertical, X, Upload, FileText, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
 import { sendWelcomeEmail } from '../lib/emailService';
 import { membersService } from '../lib/database';
+import { useToast } from '../contexts/ToastContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface MemberManagerProps {
   members: Member[];
@@ -13,8 +15,14 @@ interface MemberManagerProps {
 }
 
 const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role, logActivity }) => {
+  const { showSuccess, showError, showWarning } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
@@ -28,10 +36,24 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     fullName: '',
     email: '',
     phone: '',
-    plan: SubscriptionPlan.BASIC,
+    plan: SubscriptionPlan.MONTHLY,
     status: 'active'
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Clear form fields on component mount (page refresh)
+  useEffect(() => {
+    setSearchTerm('');
+    setBulkData('');
+    setNewMember({
+      fullName: '',
+      email: '',
+      phone: '',
+      plan: SubscriptionPlan.MONTHLY,
+      status: 'active'
+    });
+    setPhotoPreview(null);
+  }, []);
 
   // Handle photo upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,13 +61,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        showError('Please select an image file');
         return;
       }
       
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
+        showError('Image size must be less than 5MB');
         return;
       }
 
@@ -77,13 +99,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        showError('Please select an image file');
         return;
       }
       
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
+        showError('Image size must be less than 5MB');
         return;
       }
 
@@ -113,11 +135,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     // Validate photo is required (if staff, they must upload photo; if admin editing, photo must exist)
     if (role === UserRole.STAFF && !editingMember.photo) {
-      alert('Photo is required. Please upload a member photo.');
+      showWarning('Photo is required. Please upload a member photo.');
       return;
     }
     if (role === UserRole.SUPER_ADMIN && !editingMember.photo) {
-      alert('Photo is required. Please upload a member photo to complete the update.');
+      showWarning('Photo is required. Please upload a member photo to complete the update.');
       return;
     }
 
@@ -154,10 +176,10 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       setShowEditModal(false);
       setEditingMember(null);
       setEditPhotoPreview(null);
-      alert(role === UserRole.STAFF ? 'Photo updated successfully!' : 'Member information updated successfully!');
+      showSuccess(role === UserRole.STAFF ? 'Photo updated successfully!' : 'Member information updated successfully!');
     } catch (error: any) {
       console.error('Error updating member:', error);
-      alert(`Failed to update member: ${error.message || 'Please try again'}`);
+      showError(`Failed to update member: ${error.message || 'Please try again'}`);
     }
   };
 
@@ -172,7 +194,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     
     // Validate photo is required
     if (!newMember.photo) {
-      alert('Photo is required. Please upload a member photo to complete registration.');
+      showWarning('Photo is required. Please upload a member photo to complete registration.');
       return;
     }
     
@@ -227,13 +249,14 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       const emailSent = await sendWelcomeEmail({
         memberName: createdMember.fullName,
         memberEmail: createdMember.email,
+        memberPhone: createdMember.phone, // Include phone for SMS
         plan: createdMember.plan,
         startDate: createdMember.startDate,
         expiryDate: createdMember.expiryDate
       });
       
       if (emailSent) {
-        console.log(`Welcome email sent to ${createdMember.email}`);
+        console.log(`Welcome email and SMS sent to ${createdMember.email}`);
       } else {
         console.warn(`Failed to send welcome email to ${createdMember.email}`);
       }
@@ -308,7 +331,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   // Handle bulk import
   const handleBulkImport = async () => {
     if (!bulkData.trim()) {
-      alert('Please enter or paste member data');
+      showWarning('Please enter or paste member data');
       return;
     }
 
@@ -391,6 +414,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
             await sendWelcomeEmail({
               memberName: createdMember.fullName,
               memberEmail: createdMember.email,
+              memberPhone: createdMember.phone, // Include phone for SMS
               plan: createdMember.plan,
               startDate: createdMember.startDate,
               expiryDate: createdMember.expiryDate
@@ -420,7 +444,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         }, 3000);
       }
     } catch (error: any) {
-      alert(`Import Error: ${error.message}`);
+      showError(`Import Error: ${error.message}`);
       setImportResults({
         success: 0,
         failed: 0,
@@ -433,14 +457,23 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
   const handleDelete = async (id: string) => {
     if (role !== UserRole.SUPER_ADMIN) {
-      alert("Only Super Admins can delete members.");
+      showError("Only Super Admins can delete members.");
       return;
     }
     const memberToDelete = members.find(m => m.id === id);
-    if (!confirm(`Are you sure you want to delete ${memberToDelete?.fullName}?`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      message: `Are you sure you want to delete ${memberToDelete?.fullName}? This action cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await performDelete(id);
+      }
+    });
+  };
 
+  const performDelete = async (id: string) => {
+    const memberToDelete = members.find(m => m.id === id);
+    
     // Try to delete from Supabase if configured
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -451,7 +484,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         console.log('✅ Member deleted from Supabase:', id);
       } catch (error) {
         console.error('❌ Error deleting member from Supabase:', error);
-        alert('Failed to delete member from database. Please try again.');
+        showError('Failed to delete member from database. Please try again.');
         return;
       }
     }
@@ -459,10 +492,24 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     // Update local state
     setMembers(prev => prev.filter(m => m.id !== id));
     logActivity('Delete Member', `Removed member ${memberToDelete?.fullName} from directory`, 'admin');
+    showSuccess(`Member ${memberToDelete?.fullName} deleted successfully`);
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title="Confirm Delete"
+          message={confirmModal.message}
+          confirmText="Delete"
+          cancelText="Cancel"
+          type="danger"
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Member Directory</h2>
         <div className="flex gap-2">
@@ -588,7 +635,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   fullName: '',
                   email: '',
                   phone: '',
-                  plan: SubscriptionPlan.BASIC,
+                  plan: SubscriptionPlan.MONTHLY,
                   status: 'active'
                 });
               }} className="text-slate-400 hover:text-slate-600">
@@ -679,9 +726,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     value={newMember.plan}
                     onChange={e => setNewMember({...newMember, plan: e.target.value as SubscriptionPlan})}
                   >
-                    <option value={SubscriptionPlan.BASIC}>Basic (₵150/mo)</option>
-                    <option value={SubscriptionPlan.PREMIUM}>Premium (₵300/mo)</option>
-                    <option value={SubscriptionPlan.VIP}>VIP (₵1500/6mo)</option>
+                    <option value={SubscriptionPlan.MONTHLY}>Monthly (₵140/mo)</option>
+                    <option value={SubscriptionPlan.TWO_WEEKS}>2 Weeks (₵100)</option>
+                    <option value={SubscriptionPlan.ONE_WEEK}>1 Week (₵70)</option>
+                    <option value={SubscriptionPlan.DAY_MORNING}>Day Morning (₵25)</option>
+                    <option value={SubscriptionPlan.DAY_EVENING}>Day Evening (₵25)</option>
                   </select>
                 </div>
               </div>
@@ -699,7 +748,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                         fullName: '',
                         email: '',
                         phone: '',
-                        plan: SubscriptionPlan.BASIC,
+                        plan: SubscriptionPlan.MONTHLY,
                         status: 'active'
                       });
                     }}
@@ -842,9 +891,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                         value={editingMember.plan}
                         onChange={e => setEditingMember({...editingMember, plan: e.target.value as SubscriptionPlan})}
                       >
-                        <option value={SubscriptionPlan.BASIC}>Basic (₵150/mo)</option>
-                        <option value={SubscriptionPlan.PREMIUM}>Premium (₵300/mo)</option>
-                        <option value={SubscriptionPlan.VIP}>VIP (₵1500/6mo)</option>
+                        <option value={SubscriptionPlan.MONTHLY}>Monthly (₵140/mo)</option>
+                        <option value={SubscriptionPlan.TWO_WEEKS}>2 Weeks (₵100)</option>
+                        <option value={SubscriptionPlan.ONE_WEEK}>1 Week (₵70)</option>
+                        <option value={SubscriptionPlan.DAY_MORNING}>Day Morning (₵25)</option>
+                        <option value={SubscriptionPlan.DAY_EVENING}>Day Evening (₵25)</option>
                       </select>
                     </div>
                     <div>
@@ -1093,6 +1144,7 @@ Jane Smith,jane@example.com,0244123457,Premium,2024-01-15,2024-02-15,active`}
         </div>
       )}
     </div>
+    </>
   );
 };
 

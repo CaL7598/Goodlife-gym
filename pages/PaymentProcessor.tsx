@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus, SubscriptionPlan } from '../types';
 import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPlus, AlertCircle } from 'lucide-react';
 import { sendPaymentEmail, sendWelcomeEmail } from '../lib/emailService';
 import { membersService, paymentsService } from '../lib/database';
+import { useToast } from '../contexts/ToastContext';
 
 interface PaymentProcessorProps {
   payments: PaymentRecord[];
@@ -15,6 +16,7 @@ interface PaymentProcessorProps {
 }
 
 const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPayments, members, setMembers, role, logActivity }) => {
+  const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState<'history' | 'momo'>('history');
   const [showPayModal, setShowPayModal] = useState(false);
   const [newPay, setNewPay] = useState<Partial<PaymentRecord>>({
@@ -28,6 +30,21 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     momoPhone: '',
     network: ''
   });
+
+  // Clear form fields on component mount (page refresh)
+  useEffect(() => {
+    setNewPay({
+      memberId: '',
+      amount: 0,
+      method: PaymentMethod.CASH,
+      status: PaymentStatus.CONFIRMED
+    });
+    setMomoDetails({
+      transactionId: '',
+      momoPhone: '',
+      network: ''
+    });
+  }, []);
 
   const handleConfirmPayment = async (id: string) => {
     const pay = payments.find(p => p.id === id);
@@ -54,11 +71,43 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
 
         if (supabaseUrl && supabaseKey) {
           try {
-            const createdMember = await membersService.create(memberToCreate);
-            console.log('✅ Member created:', createdMember.id);
+            // Check if member already exists by email
+            let existingMember = await membersService.getByEmail(memberToCreate.email);
+            let createdMember: Member;
             
-            // Update local state
-            setMembers(prev => [...prev, createdMember]);
+            if (existingMember) {
+              // Member already exists, use existing member and update if needed
+              console.log('ℹ️ Member already exists with email:', memberToCreate.email);
+              createdMember = existingMember;
+              
+              // Optionally update member details if payment has newer information
+              // (e.g., update plan, expiry date, etc.)
+              const updates: Partial<Member> = {};
+              if (memberToCreate.plan && memberToCreate.plan !== existingMember.plan) {
+                updates.plan = memberToCreate.plan;
+              }
+              if (memberToCreate.expiryDate && memberToCreate.expiryDate > existingMember.expiryDate) {
+                updates.expiryDate = memberToCreate.expiryDate;
+              }
+              if (memberToCreate.photo && !existingMember.photo) {
+                updates.photo = memberToCreate.photo;
+              }
+              
+              if (Object.keys(updates).length > 0) {
+                createdMember = await membersService.update(existingMember.id, updates);
+                console.log('✅ Member updated:', createdMember.id);
+              }
+            } else {
+              // Member doesn't exist, create new one
+              createdMember = await membersService.create(memberToCreate);
+              console.log('✅ Member created:', createdMember.id);
+            }
+            
+            // Update local state if member not already in list
+            setMembers(prev => {
+              const exists = prev.some(m => m.id === createdMember.id);
+              return exists ? prev : [...prev, createdMember];
+            });
             
             // Update payment with memberId
             const updatedPayment = {
@@ -78,20 +127,21 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             // Update local state
             setPayments(prev => prev.map(p => p.id === id ? updatedPayment : p));
             
-            logActivity('Confirm Payment & Create Member', `Verified ${pay.method} payment of ₵${pay.amount} and created member ${pay.memberName}`, 'financial');
+            logActivity('Confirm Payment & Create Member', `Verified ${pay.method} payment of ₵${pay.amount} and ${existingMember ? 'linked to existing' : 'created'} member ${pay.memberName}`, 'financial');
             
-            // Send welcome email
-            if (createdMember.email) {
+            // Send welcome email only if member was just created
+            if (!existingMember && createdMember.email) {
               const emailSent = await sendWelcomeEmail({
                 memberName: createdMember.fullName,
                 memberEmail: createdMember.email,
+                memberPhone: createdMember.phone, // Include phone for SMS
                 plan: createdMember.plan,
                 startDate: createdMember.startDate,
                 expiryDate: createdMember.expiryDate
               });
               
               if (emailSent) {
-                console.log(`Welcome email sent to ${createdMember.email}`);
+                console.log(`Welcome email and SMS sent to ${createdMember.email}`);
               }
             }
             
@@ -100,6 +150,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
               await sendPaymentEmail({
                 memberName: pay.memberName,
                 memberEmail: createdMember.email,
+                memberPhone: createdMember.phone, // Include phone for SMS
                 amount: pay.amount,
                 paymentMethod: pay.method,
                 paymentDate: pay.date,
@@ -108,15 +159,48 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
               });
             }
             
-            alert(`Payment confirmed and member ${pay.memberName} has been added!`);
+            showSuccess(`Payment confirmed and member ${pay.memberName} has been ${existingMember ? 'linked' : 'added'}!`);
             return;
           } catch (error: any) {
             console.error('Error creating member:', error);
-            alert(`Failed to create member: ${error.message || 'Please try again'}`);
+            // Check if it's a duplicate key error
+            if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+              // Try to get the existing member and use it
+              try {
+                const existingMember = await membersService.getByEmail(memberToCreate.email);
+                if (existingMember) {
+                  // Use existing member and continue with payment confirmation
+                  const updatedPayment = {
+                    ...pay,
+                    memberId: existingMember.id,
+                    status: PaymentStatus.CONFIRMED,
+                    confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+                  };
+                  
+                  await paymentsService.update(id, {
+                    memberId: existingMember.id,
+                    status: PaymentStatus.CONFIRMED,
+                    confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+                  });
+                  
+                  setPayments(prev => prev.map(p => p.id === id ? updatedPayment : p));
+                  setMembers(prev => {
+                    const exists = prev.some(m => m.id === existingMember.id);
+                    return exists ? prev : [...prev, existingMember];
+                  });
+                  
+                  showSuccess(`Payment confirmed and linked to existing member ${pay.memberName}!`);
+                  return;
+                }
+              } catch (retryError) {
+                console.error('Error retrieving existing member:', retryError);
+              }
+            }
+            showError(`Failed to create member: ${error.message || 'Please try again'}`);
             return;
           }
         } else {
-          alert('Database not configured. Cannot create member.');
+          showError('Database not configured. Cannot create member.');
           return;
         }
       } else {
@@ -148,6 +232,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
           await sendPaymentEmail({
             memberName: pay.memberName,
             memberEmail: member.email,
+            memberPhone: member.phone, // Include phone for SMS
             amount: pay.amount,
             paymentMethod: pay.method,
             paymentDate: pay.date,
@@ -158,7 +243,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       }
     } catch (error: any) {
       console.error('Error confirming payment:', error);
-      alert(`Failed to confirm payment: ${error.message || 'Please try again'}`);
+      showError(`Failed to confirm payment: ${error.message || 'Please try again'}`);
     }
   };
 
@@ -192,6 +277,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       const emailSent = await sendPaymentEmail({
         memberName: payment.memberName,
         memberEmail: member.email,
+        memberPhone: member.phone, // Include phone for SMS
         amount: payment.amount,
         paymentMethod: payment.method,
         paymentDate: payment.date,

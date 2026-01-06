@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Resend } from 'resend';
+import twilio from 'twilio';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -24,6 +25,46 @@ const resend = new Resend(process.env.RESEND_API_KEY || process.env.VITE_RESEND_
 const fromEmailRaw = process.env.RESEND_FROM_EMAIL || process.env.VITE_RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 // Format: if it doesn't have < >, add display name
 const RESEND_FROM_EMAIL = fromEmailRaw.includes('<') ? fromEmailRaw : `Goodlife Fitness <${fromEmailRaw}>`;
+
+// Initialize Twilio
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
+
+// Helper function to format phone number (add country code if missing)
+function formatPhoneNumber(phone) {
+  if (!phone) return null;
+  // Remove any non-digit characters
+  let cleaned = phone.replace(/\D/g, '');
+  // If it doesn't start with country code, assume Ghana (+233)
+  if (!cleaned.startsWith('233')) {
+    // If it starts with 0, replace with 233
+    if (cleaned.startsWith('0')) {
+      cleaned = '233' + cleaned.substring(1);
+    } else {
+      cleaned = '233' + cleaned;
+    }
+  }
+  return '+' + cleaned;
+}
+
+// Helper function to create SMS text from email content
+function createWelcomeSMSText(memberName, plan, startDate, expiryDate) {
+  return `Welcome to Goodlife Fitness, ${memberName}! Your ${plan} membership starts ${new Date(startDate).toLocaleDateString()} and expires ${new Date(expiryDate).toLocaleDateString()}. We're thrilled to have you! - Goodlife Fitness Team`;
+}
+
+function createPaymentSMSText(memberName, amount, paymentMethod, paymentDate, transactionId, expiryDate) {
+  let text = `Payment Confirmed, ${memberName}! Amount: ₵${amount.toLocaleString()}, Method: ${paymentMethod}, Date: ${new Date(paymentDate).toLocaleDateString()}`;
+  if (transactionId) {
+    text += `, Transaction ID: ${transactionId}`;
+  }
+  if (expiryDate) {
+    text += `. Membership expires: ${new Date(expiryDate).toLocaleDateString()}`;
+  }
+  text += ' - Goodlife Fitness';
+  return text;
+}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -648,6 +689,233 @@ app.use((err, req, res, next) => {
   }
 });
 
+// Send welcome SMS
+app.post('/api/send-welcome-sms', async (req, res) => {
+  try {
+    const { memberName, memberPhone, plan, startDate, expiryDate } = req.body;
+
+    if (!memberPhone || !memberName) {
+      return res.status(400).json({ error: 'memberPhone and memberName are required' });
+    }
+
+    // Re-check environment variables in case they weren't loaded at startup
+    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
+    const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+
+    if (!accountSid || !authToken || !phoneNumber) {
+      console.warn('⚠️ Twilio not configured. Missing:', {
+        accountSid: !!accountSid,
+        authToken: !!authToken,
+        phoneNumber: !!phoneNumber
+      });
+      return res.status(503).json({ 
+        error: 'SMS service not configured',
+        suggestion: 'Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to your .env file'
+      });
+    }
+
+    // Initialize Twilio client if not already initialized
+    let client = twilioClient;
+    if (!client) {
+      try {
+        client = twilio(accountSid, authToken);
+        console.log('✅ Twilio client initialized');
+      } catch (initError) {
+        console.error('❌ Failed to initialize Twilio client:', initError);
+        return res.status(500).json({ 
+          error: 'Failed to initialize SMS service',
+          details: initError.message
+        });
+      }
+    }
+
+    const formattedPhone = formatPhoneNumber(memberPhone);
+    if (!formattedPhone) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
+    }
+
+    const messageText = createWelcomeSMSText(memberName, plan, startDate, expiryDate);
+
+    console.log('📱 Attempting to send SMS:', {
+      from: phoneNumber,
+      to: formattedPhone,
+      messageLength: messageText.length
+    });
+
+    const message = await client.messages.create({
+      body: messageText,
+      from: phoneNumber,
+      to: formattedPhone
+    });
+
+    console.log('✅ Welcome SMS sent successfully:', message.sid);
+    res.json({ success: true, data: { sid: message.sid, status: message.status } });
+  } catch (error) {
+    console.error('❌ Error sending welcome SMS:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      moreInfo: error.moreInfo
+    });
+    res.status(500).json({ 
+      error: error.message || 'Failed to send SMS',
+      code: error.code || 'SMS_ERROR',
+      details: error.moreInfo || error.toString()
+    });
+  }
+});
+
+// Send payment confirmation SMS
+app.post('/api/send-payment-sms', async (req, res) => {
+  try {
+    const { memberName, memberPhone, amount, paymentMethod, paymentDate, transactionId, expiryDate } = req.body;
+
+    if (!memberPhone || !memberName) {
+      return res.status(400).json({ error: 'memberPhone and memberName are required' });
+    }
+
+    // Re-check environment variables in case they weren't loaded at startup
+    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
+    const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+
+    if (!accountSid || !authToken || !phoneNumber) {
+      console.warn('⚠️ Twilio not configured. Skipping SMS send.');
+      return res.status(503).json({ 
+        error: 'SMS service not configured',
+        suggestion: 'Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to your .env file'
+      });
+    }
+
+    // Initialize Twilio client if not already initialized
+    let client = twilioClient;
+    if (!client) {
+      try {
+        client = twilio(accountSid, authToken);
+        console.log('✅ Twilio client initialized');
+      } catch (initError) {
+        console.error('❌ Failed to initialize Twilio client:', initError);
+        return res.status(500).json({ 
+          error: 'Failed to initialize SMS service',
+          details: initError.message
+        });
+      }
+    }
+
+    const formattedPhone = formatPhoneNumber(memberPhone);
+    if (!formattedPhone) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
+    }
+
+    const messageText = createPaymentSMSText(memberName, amount, paymentMethod, paymentDate, transactionId, expiryDate);
+
+    console.log('📱 Attempting to send payment SMS:', {
+      from: phoneNumber,
+      to: formattedPhone,
+      messageLength: messageText.length
+    });
+
+    const message = await client.messages.create({
+      body: messageText,
+      from: phoneNumber,
+      to: formattedPhone
+    });
+
+    console.log('✅ Payment SMS sent successfully:', message.sid);
+    res.json({ success: true, data: { sid: message.sid, status: message.status } });
+  } catch (error) {
+    console.error('❌ Error sending payment SMS:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      moreInfo: error.moreInfo
+    });
+    res.status(500).json({ 
+      error: error.message || 'Failed to send SMS',
+      code: error.code || 'SMS_ERROR',
+      details: error.moreInfo || error.toString()
+    });
+  }
+});
+
+// Send general message SMS
+app.post('/api/send-message-sms', async (req, res) => {
+  try {
+    const { memberName, memberPhone, message } = req.body;
+
+    if (!memberPhone || !memberName || !message) {
+      return res.status(400).json({ error: 'memberPhone, memberName, and message are required' });
+    }
+
+    // Re-check environment variables in case they weren't loaded at startup
+    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
+    const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+
+    if (!accountSid || !authToken || !phoneNumber) {
+      console.warn('⚠️ Twilio not configured. Skipping SMS send.');
+      return res.status(503).json({ 
+        error: 'SMS service not configured',
+        suggestion: 'Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to your .env file'
+      });
+    }
+
+    // Initialize Twilio client if not already initialized
+    let client = twilioClient;
+    if (!client) {
+      try {
+        client = twilio(accountSid, authToken);
+        console.log('✅ Twilio client initialized');
+      } catch (initError) {
+        console.error('❌ Failed to initialize Twilio client:', initError);
+        return res.status(500).json({ 
+          error: 'Failed to initialize SMS service',
+          details: initError.message
+        });
+      }
+    }
+
+    const formattedPhone = formatPhoneNumber(memberPhone);
+    if (!formattedPhone) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
+    }
+
+    // Format message with greeting
+    const messageText = `Goodlife Fitness\n\nHi ${memberName},\n\n${message}\n\n- Goodlife Fitness Team`;
+
+    console.log('📱 Attempting to send message SMS:', {
+      from: phoneNumber,
+      to: formattedPhone,
+      messageLength: messageText.length
+    });
+
+    const twilioMessage = await client.messages.create({
+      body: messageText,
+      from: phoneNumber,
+      to: formattedPhone
+    });
+
+    console.log('✅ Message SMS sent successfully:', twilioMessage.sid);
+    res.json({ success: true, data: { sid: twilioMessage.sid, status: twilioMessage.status } });
+  } catch (error) {
+    console.error('❌ Error sending message SMS:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      moreInfo: error.moreInfo
+    });
+    res.status(500).json({ 
+      error: error.message || 'Failed to send SMS',
+      code: error.code || 'SMS_ERROR',
+      details: error.moreInfo || error.toString()
+    });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
@@ -658,6 +926,12 @@ app.listen(PORT, () => {
   console.log(`📧 Resend API configured: ${resend ? 'Yes' : 'No'}`);
   console.log(`📮 From Email: ${RESEND_FROM_EMAIL}`);
   console.log(`🔑 API Key: ${process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY ? 'Set' : 'Missing'}`);
+  console.log(`📱 Twilio SMS configured: ${twilioClient && TWILIO_PHONE_NUMBER ? 'Yes' : 'No'}`);
+  if (twilioClient && TWILIO_PHONE_NUMBER) {
+    console.log(`📞 Twilio Phone: ${TWILIO_PHONE_NUMBER}`);
+  } else {
+    console.log(`⚠️  Twilio not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to .env`);
+  }
   if (RESEND_FROM_EMAIL.includes('@resend.dev')) {
     console.log(`⚠️  WARNING: Using test domain. Update RESEND_FROM_EMAIL in .env to use your verified domain!`);
   } else if (RESEND_FROM_EMAIL.includes('goodlifefitnessghana.de')) {

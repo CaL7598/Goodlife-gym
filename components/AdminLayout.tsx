@@ -3,6 +3,7 @@ import React from 'react';
 import { UserRole, StaffMember, Privilege } from '../types';
 import { NAVIGATION_ITEMS } from '../constants';
 import { hasPrivilege } from '../lib/privileges';
+import StaffProfileModal from './StaffProfileModal';
 import { 
   LogOut, 
   Menu, 
@@ -42,9 +43,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   onShiftSignOut
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [showProfileModal, setShowProfileModal] = React.useState(false);
 
   // Get current staff member for privilege checks
   const currentStaff = staff.find(s => s.email === userEmail);
+
+  // Get initials from full name for avatar fallback
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   // Filter navigation based on role and privileges
   const filteredNav = NAVIGATION_ITEMS.filter(item => {
@@ -166,17 +179,48 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
               )}
             </div>
 
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-sm font-bold text-slate-900">
-                {role === UserRole.SUPER_ADMIN ? 'Super Admin' : 'Staff Member'}
-              </span>
-              <span className="text-[10px] text-slate-500 uppercase tracking-widest leading-none">
-                {role}
-              </span>
-            </div>
-            <div className={`p-2 rounded-full ${role === UserRole.SUPER_ADMIN ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
-              {role === UserRole.SUPER_ADMIN ? <ShieldCheck size={24} /> : <UserCircle size={24} />}
-            </div>
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <div className="flex flex-col items-start hidden sm:flex">
+                <span className="text-base font-bold text-slate-900 leading-tight">
+                  {currentStaff?.fullName || (role === UserRole.SUPER_ADMIN ? 'Super Admin' : 'Staff Member')}
+                </span>
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest leading-none mt-0.5">
+                  {role}
+                </span>
+              </div>
+              <div className={`w-10 h-10 rounded-full border border-blue-300 flex items-center justify-center ${
+                role === UserRole.SUPER_ADMIN ? 'bg-amber-50' : 'bg-blue-50'
+              }`}>
+                {currentStaff?.avatar ? (
+                  <img
+                    src={currentStaff.avatar}
+                    alt={currentStaff.fullName}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    role === UserRole.SUPER_ADMIN 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-blue-500 text-white'
+                  }`}>
+                    {currentStaff ? (
+                      <span className="text-xs font-bold">
+                        {getInitials(currentStaff.fullName)}
+                      </span>
+                    ) : (
+                      role === UserRole.SUPER_ADMIN ? (
+                        <ShieldCheck size={18} className="text-white" />
+                      ) : (
+                        <UserCircle size={18} className="text-white" />
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            </button>
           </div>
         </header>
 
@@ -220,6 +264,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Staff Profile Modal */}
+      <StaffProfileModal
+        isOpen={showProfileModal}
+        staff={currentStaff || null}
+        role={role}
+        onClose={() => setShowProfileModal(false)}
+      />
     </div>
   );
 };

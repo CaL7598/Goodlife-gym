@@ -255,7 +255,13 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
   // Helper to determine staff status
   const getStaffStatus = (email: string) => {
     const today = new Date().toISOString().split('T')[0];
-    const isCurrentlyOnShift = attendanceRecords.some(r => r.staffEmail === email && r.date === today && !r.signOutTime);
+    // Only consider on shift if there's a sign-in time for today and no sign-out time
+    const todayRecord = attendanceRecords.find(r => 
+      r.staffEmail === email && 
+      r.date === today && 
+      r.signInTime
+    );
+    const isCurrentlyOnShift = todayRecord ? !todayRecord.signOutTime : false;
     
     // Find last activity
     const lastActivity = activityLogs.find(log => log.userEmail === email);
@@ -567,7 +573,13 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {staff.map((employee) => {
+                {staff
+                  .filter(employee => 
+                    employee.email !== 'kojo@goodlife.com' && 
+                    employee.email !== 'admin@goodlife.com' &&
+                    employee.email !== 'staff@goodlife.com'
+                  )
+                  .map((employee) => {
                   const status = getStaffStatus(employee.email);
                   return (
                     <div key={employee.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 flex items-center justify-between group hover:border-rose-200 transition-colors">

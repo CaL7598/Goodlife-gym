@@ -55,6 +55,9 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
   }
 
   const planPrice = parseFloat(selectedPlan.price);
+  // Registration fee: ₵100 for monthly/weekly plans, ₵0 for day passes
+  const registrationFee = (selectedPlan.name === 'Day Morning' || selectedPlan.name === 'Day Evening') ? 0 : 100;
+  const totalAmount = planPrice + registrationFee;
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,7 +122,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
     try {
       // Create payment record with member info (member will be created after admin confirms payment)
       const now = new Date();
-      const paymentAmount = planPrice;
+      const paymentAmount = totalAmount;
       
       // Calculate expiry date based on plan (will be used when member is created)
       const expiry = new Date();
@@ -257,7 +260,10 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-rose-600 to-rose-700 text-white p-6">
             <h1 className="text-3xl font-bold mb-2">Complete Your Registration</h1>
-            <p className="text-rose-100">You're signing up for the <strong>{selectedPlan.name}</strong> plan - ₵{selectedPlan.price}/{selectedPlan.period.toLowerCase()}</p>
+            <p className="text-rose-100">
+              You're signing up for the <strong>{selectedPlan.name}</strong> plan - ₵{selectedPlan.price}/{selectedPlan.period.toLowerCase()}
+              {registrationFee > 0 && <span> + Registration: ₵{registrationFee}</span>}
+            </p>
           </div>
 
           <div className="p-6 md:p-8">
@@ -400,8 +406,18 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                       <span className="font-bold text-slate-900">{selectedPlan.name}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-slate-600">Amount:</span>
-                      <span className="text-2xl font-bold text-rose-600">₵{selectedPlan.price}</span>
+                      <span className="text-slate-600">Plan Amount:</span>
+                      <span className="text-lg font-semibold text-slate-900">₵{selectedPlan.price}</span>
+                    </div>
+                    {registrationFee > 0 && (
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-slate-600">Registration Fee:</span>
+                        <span className="text-lg font-semibold text-slate-900">₵{registrationFee}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
+                      <span className="text-slate-700 font-semibold">Total Amount:</span>
+                      <span className="text-2xl font-bold text-rose-600">₵{totalAmount}</span>
                     </div>
                   </div>
 
@@ -436,7 +452,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                       <li>Dial <strong>*170#</strong> on your phone</li>
                       <li>Select <strong>"Send Money"</strong> or <strong>"Transfer"</strong></li>
                       <li>Enter the number: <strong>{MOBILE_MONEY_NUMBER}</strong></li>
-                      <li>Enter the amount: <strong>₵{selectedPlan.price}</strong></li>
+                      <li>Enter the amount: <strong>₵{totalAmount}</strong> (Plan: ₵{selectedPlan.price}{registrationFee > 0 ? ` + Registration: ₵${registrationFee}` : ''})</li>
                       <li>Enter your Mobile Money PIN</li>
                       <li>Confirm the transaction</li>
                       <li>Save the <strong>Transaction ID</strong> you receive</li>
@@ -478,8 +494,18 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                       <span className="font-bold text-slate-900">{selectedPlan.name}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-slate-600">Amount Paid:</span>
-                      <span className="text-2xl font-bold text-rose-600">₵{selectedPlan.price}</span>
+                      <span className="text-slate-600">Plan Amount:</span>
+                      <span className="text-lg font-semibold text-slate-900">₵{selectedPlan.price}</span>
+                    </div>
+                    {registrationFee > 0 && (
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-slate-600">Registration Fee:</span>
+                        <span className="text-lg font-semibold text-slate-900">₵{registrationFee}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
+                      <span className="text-slate-700 font-semibold">Total Amount Paid:</span>
+                      <span className="text-2xl font-bold text-rose-600">₵{totalAmount}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2 text-sm">
                       <span className="text-slate-600">To:</span>

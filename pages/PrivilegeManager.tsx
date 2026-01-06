@@ -16,9 +16,15 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
   role,
   logActivity 
 }) => {
+  const { showSuccess } = useToast();
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [editingPrivileges, setEditingPrivileges] = useState<Set<Privilege>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Only Super Admin can access this
   if (role !== UserRole.SUPER_ADMIN) {
@@ -39,9 +45,18 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
 
   const handleStaffSelect = (staffId: string) => {
     if (hasChanges) {
-      if (!confirm('You have unsaved changes. Do you want to discard them?')) {
-        return;
-      }
+      setConfirmModal({
+        isOpen: true,
+        message: 'You have unsaved changes. Do you want to discard them?',
+        onConfirm: () => {
+          setConfirmModal(null);
+          setSelectedStaffId(staffId);
+          const staffMember = staff.find(s => s.id === staffId);
+          setEditingPrivileges(new Set(staffMember?.privileges || []));
+          setHasChanges(false);
+        }
+      });
+      return;
     }
     setSelectedStaffId(staffId);
     const staffMember = staff.find(s => s.id === staffId);
@@ -99,7 +114,7 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
       }
     }
 
-    alert(`Privileges updated successfully for ${selectedStaff.fullName}`);
+    showSuccess(`Privileges updated successfully for ${selectedStaff.fullName}`);
   };
 
   const handleReset = () => {
@@ -110,7 +125,20 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title="Confirm Action"
+          message={confirmModal.message}
+          confirmText="Yes, Discard"
+          cancelText="Cancel"
+          type="warning"
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -254,6 +282,7 @@ const PrivilegeManager: React.FC<PrivilegeManagerProps> = ({
         </div>
       </div>
     </div>
+    </>
   );
 };
 

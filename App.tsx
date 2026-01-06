@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   UserRole, 
   Member, 
   StaffMember,
@@ -11,7 +11,8 @@ import {
   PaymentMethod,
   PaymentStatus,
   ActivityLog,
-  AttendanceRecord
+  AttendanceRecord,
+  ClientCheckIn
 } from './types';
 import { 
   INITIAL_MEMBERS, 
@@ -27,13 +28,17 @@ import {
   announcementsService,
   galleryService,
   activityLogsService,
-  attendanceService
+  attendanceService,
+  clientCheckInService
 } from './lib/database';
 import { supabase } from './lib/supabase';
 
 // UI Components
 import PublicLayout from './components/PublicLayout';
 import AdminLayout from './components/AdminLayout';
+import UpdateNotification from './components/UpdateNotification';
+import { ToastProvider } from './contexts/ToastContext';
+import ConfirmModal from './components/ConfirmModal';
 import PublicHome from './pages/PublicHome';
 import About from './pages/About';
 import Gallery from './pages/Gallery';
@@ -51,6 +56,8 @@ import AdminLogin from './pages/AdminLogin';
 import ActivityLogs from './pages/ActivityLogs';
 import AttendanceManager from './pages/AttendanceManager';
 import PrivilegeManager from './pages/PrivilegeManager';
+import CheckIn from './pages/CheckIn';
+import CheckInManager from './pages/CheckInManager';
 
 const App: React.FC = () => {
   // Initialize state from localStorage if available
@@ -74,6 +81,24 @@ const App: React.FC = () => {
   const [gallery, setGallery] = useState<GalleryImage[]>(INITIAL_GALLERY as GalleryImage[]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [clientCheckIns, setClientCheckIns] = useState<ClientCheckIn[]>([]);
+  
+  // Update notification system
+  const [lastCheckedTimestamp, setLastCheckedTimestamp] = useState<string | null>(
+    localStorage.getItem('lastUpdateCheck') || null
+  );
+  const [updateNotificationDismissed, setUpdateNotificationDismissed] = useState(false);
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'warning' | 'danger' | 'info';
+    onConfirm: () => void;
+  } | null>(null);
 
   // Save authentication state to localStorage whenever it changes
   useEffect(() => {
@@ -94,6 +119,47 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('currentPage', currentPage);
   }, [currentPage]);
+
+  // Check for updates periodically when logged in
+  useEffect(() => {
+    if (userRole === UserRole.PUBLIC || !useSupabase) return;
+
+    const checkForUpdates = async () => {
+      try {
+        const latestAnnouncements = await announcementsService.getAll().catch(() => []);
+        
+        // Always update announcements to get latest data
+        if (latestAnnouncements.length > 0) {
+          setAnnouncements(latestAnnouncements);
+        }
+        
+        // If we have a last checked timestamp, check for new ones
+        if (lastCheckedTimestamp && latestAnnouncements.length > 0) {
+          const lastChecked = new Date(lastCheckedTimestamp);
+          const hasNewUpdates = latestAnnouncements.some(ann => {
+            // Compare announcement date with last checked time
+            const annDate = new Date(ann.date);
+            return annDate > lastChecked;
+          });
+
+          if (hasNewUpdates) {
+            // Reset dismissed state when new updates are found
+            setUpdateNotificationDismissed(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+      }
+    };
+
+    // Check immediately
+    checkForUpdates();
+
+    // Check every 2 minutes while logged in
+    const interval = setInterval(checkForUpdates, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [userRole, useSupabase, lastCheckedTimestamp]);
 
   // Check if Supabase is configured and load data
   useEffect(() => {
@@ -127,14 +193,15 @@ const App: React.FC = () => {
         }
 
         // Load all data from Supabase
-        const [membersData, staffData, paymentsData, announcementsData, galleryData, logsData, attendanceData] = await Promise.all([
+        const [membersData, staffData, paymentsData, announcementsData, galleryData, logsData, attendanceData, checkInsData] = await Promise.all([
           membersService.getAll().catch(() => []),
           staffService.getAll().catch(() => []),
           paymentsService.getAll().catch(() => []),
           announcementsService.getAll().catch(() => []),
           galleryService.getAll().catch(() => []),
           activityLogsService.getAll().catch(() => []),
-          attendanceService.getAll().catch(() => [])
+          attendanceService.getAll().catch(() => []),
+          clientCheckInService.getAll().catch(() => [])
         ]);
 
         console.log('📊 Data loaded from Supabase:', {
@@ -144,7 +211,8 @@ const App: React.FC = () => {
           announcements: announcementsData.length,
           gallery: galleryData.length,
           logs: logsData.length,
-          attendance: attendanceData.length
+          attendance: attendanceData.length,
+          checkIns: checkInsData.length
         });
 
         if (membersData.length > 0) setMembers(membersData);
@@ -154,6 +222,7 @@ const App: React.FC = () => {
         if (galleryData.length > 0) setGallery(galleryData);
         if (logsData.length > 0) setActivityLogs(logsData);
         if (attendanceData.length > 0) setAttendanceRecords(attendanceData);
+        if (checkInsData.length > 0) setClientCheckIns(checkInsData);
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
         // Fall back to local state if Supabase fails
@@ -311,6 +380,7 @@ const App: React.FC = () => {
         case 'announcements': return <Announcements announcements={announcements} />;
         case 'contact': return <Contact />;
         case 'plans': return <MembershipPlans setCurrentPage={setCurrentPage} />;
+        case 'checkin': return <CheckIn />;
         case 'checkout': {
           const storedPlan = sessionStorage.getItem('selectedPlan');
           const selectedPlan = storedPlan ? JSON.parse(storedPlan) : null;
@@ -334,6 +404,11 @@ const App: React.FC = () => {
           localStorage.setItem('userRole', role);
           localStorage.setItem('userEmail', email);
           localStorage.setItem('isAdminLoggedIn', 'true');
+          // Reset update check on login to show new updates
+          const now = new Date().toISOString();
+          setLastCheckedTimestamp(now);
+          localStorage.setItem('lastUpdateCheck', now);
+          setUpdateNotificationDismissed(false);
           setCurrentPage('dashboard');
           localStorage.setItem('currentPage', 'dashboard');
         }} logActivity={logActivity} />;
@@ -358,6 +433,7 @@ const App: React.FC = () => {
         case 'communications': return <CommunicationCenter members={members} />;
         case 'activity-logs': return <ActivityLogs logs={activityLogs} />;
         case 'attendance': return <AttendanceManager records={attendanceRecords} currentUserEmail={userEmail} role={userRole} />;
+        case 'checkins': return <CheckInManager checkIns={clientCheckIns} setCheckIns={setClientCheckIns} />;
         case 'content': return <ContentManager 
           announcements={announcements} 
           setAnnouncements={setAnnouncements} 
@@ -379,23 +455,31 @@ const App: React.FC = () => {
   const handleLogout = () => {
     // Check if staff is on shift and warn them
     if (userRole === UserRole.STAFF && isOnShift) {
-      const confirmLogout = window.confirm(
-        '⚠️ WARNING: You are currently on shift!\n\n' +
-        'You must sign out from your shift before logging out.\n\n' +
-        'Would you like to:\n' +
-        '• Click "Cancel" to sign out from shift first\n' +
-        '• Click "OK" to logout anyway (NOT RECOMMENDED)'
-      );
-      
-      if (!confirmLogout) {
-        // User cancelled - they should sign out from shift first
-        return;
-      }
-      
-      // User confirmed logout even though on shift - log this as a warning
-      logActivity('Logout Warning', 'Staff member logged out while still on shift', 'access');
+      setConfirmModal({
+        isOpen: true,
+        title: 'Warning',
+        message: '⚠️ WARNING: You are currently on shift!\n\n' +
+          'You must sign out from your shift before logging out.\n\n' +
+          'Would you like to:\n' +
+          '• Click "Cancel" to sign out from shift first\n' +
+          '• Click "OK" to logout anyway (NOT RECOMMENDED)',
+        confirmText: 'OK',
+        cancelText: 'Cancel',
+        type: 'warning',
+        onConfirm: () => {
+          // User confirmed logout even though on shift - log this as a warning
+          logActivity('Logout Warning', 'Staff member logged out while still on shift', 'access');
+          setConfirmModal(null);
+          performLogout();
+        }
+      });
+      return;
     }
     
+    performLogout();
+  };
+
+  const performLogout = () => {
     logActivity('Logout', 'User signed out of the portal', 'access');
     setUserRole(UserRole.PUBLIC);
     setUserEmail('');
@@ -420,28 +504,61 @@ const App: React.FC = () => {
     );
   }
 
+  const handleDismissUpdateNotification = () => {
+    setUpdateNotificationDismissed(true);
+    // Update last checked timestamp when dismissed
+    const now = new Date().toISOString();
+    setLastCheckedTimestamp(now);
+    localStorage.setItem('lastUpdateCheck', now);
+  };
+
   return (
-    <div className="min-h-screen">
-      {userRole === UserRole.PUBLIC ? (
-        <PublicLayout setCurrentPage={setCurrentPage} currentPage={currentPage}>
-          {renderPage()}
-        </PublicLayout>
-      ) : (
-        <AdminLayout 
-          setCurrentPage={setCurrentPage} 
-          currentPage={currentPage} 
-          role={userRole}
-          staff={staff}
-          userEmail={userEmail}
-          onLogout={handleLogout}
-          isOnShift={isOnShift}
-          onShiftSignIn={handleShiftSignIn}
-          onShiftSignOut={handleShiftSignOut}
-        >
-          {renderPage()}
-        </AdminLayout>
-      )}
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen">
+        {/* Update Notification - Only show for logged-in staff */}
+        {userRole !== UserRole.PUBLIC && !updateNotificationDismissed && (
+          <UpdateNotification
+            announcements={announcements}
+            lastCheckedTimestamp={lastCheckedTimestamp}
+            onDismiss={handleDismissUpdateNotification}
+          />
+        )}
+
+        {/* Confirmation Modal */}
+        {confirmModal && (
+          <ConfirmModal
+            isOpen={confirmModal.isOpen}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            confirmText={confirmModal.confirmText}
+            cancelText={confirmModal.cancelText}
+            type={confirmModal.type}
+            onConfirm={confirmModal.onConfirm}
+            onCancel={() => setConfirmModal(null)}
+          />
+        )}
+        
+        {userRole === UserRole.PUBLIC ? (
+          <PublicLayout setCurrentPage={setCurrentPage} currentPage={currentPage}>
+            {renderPage()}
+          </PublicLayout>
+        ) : (
+          <AdminLayout 
+            setCurrentPage={setCurrentPage} 
+            currentPage={currentPage} 
+            role={userRole}
+            staff={staff}
+            userEmail={userEmail}
+            onLogout={handleLogout}
+            isOnShift={isOnShift}
+            onShiftSignIn={handleShiftSignIn}
+            onShiftSignOut={handleShiftSignOut}
+          >
+            {renderPage()}
+          </AdminLayout>
+        )}
+      </div>
+    </ToastProvider>
   );
 };
 

@@ -18,6 +18,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
     { id: 'plans', label: 'Plans' },
     { id: 'announcements', label: 'News' },
     { id: 'contact', label: 'Contact' },
+    { id: 'checkin', label: 'Check In' },
   ];
 
   return (
@@ -118,8 +119,11 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
             <div>
               <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Hours</h3>
               <ul className="space-y-2 text-sm">
-                <li>Mon - Fri: 5:00 AM - 10:00 PM</li>
-                <li>Sat - Sun: 7:00 AM - 6:00 PM</li>
+                <li>Mon - Fri: 5:00 AM - 11:00 AM</li>
+                <li className="ml-4">4:00 PM - 8:00 PM</li>
+                <li>Saturday: 5:00 AM - 11:00 AM</li>
+                <li className="ml-4">5:00 PM - 7:30 PM</li>
+                <li className="mt-2 text-rose-400">Aerobics: Mon, Wed, Sat 6:00 AM</li>
               </ul>
             </div>
           </div>

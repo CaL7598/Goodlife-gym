@@ -19,7 +19,7 @@ const Contact: React.FC = () => {
               </div>
               <div>
                 <h4 className="font-bold text-slate-900 text-lg mb-1">Our Location</h4>
-                <p className="text-slate-500 text-sm">123 Fitness Street, East Legon, Accra, Ghana</p>
+                <p className="text-slate-500 text-sm">Sunyani Airport Road near Esbak Kitchen</p>
               </div>
             </div>
 
@@ -55,7 +55,9 @@ const Contact: React.FC = () => {
               </div>
               <div>
                 <h4 className="font-bold text-slate-900 text-lg mb-1">Email Address</h4>
-                <p className="text-slate-500 text-sm">hello@goodlifefitness.com</p>
+                <p className="text-slate-500 text-sm">
+                  <a href="mailto:goodlifeghana13@gmail.com" className="text-rose-600 hover:text-rose-700 hover:underline">goodlifeghana13@gmail.com</a>
+                </p>
               </div>
             </div>
           </div>
@@ -63,27 +65,56 @@ const Contact: React.FC = () => {
           <div className="bg-slate-900 rounded-3xl p-10 text-white relative overflow-hidden">
             <h3 className="text-2xl font-bold mb-6">Operating Hours</h3>
             <div className="space-y-4 relative z-10">
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span>Monday - Friday</span>
-                <span className="text-rose-400 font-bold">5:00 AM - 10:00 PM</span>
+              <div className="border-b border-slate-800 pb-3">
+                <div className="font-semibold mb-2 text-rose-400">MONDAYS - FRIDAYS</div>
+                <div className="flex flex-col gap-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Morning</span>
+                    <span className="font-bold">5:00 AM - 11:00 AM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Evening</span>
+                    <span className="font-bold">4:00 PM - 8:00 PM</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span>Saturday</span>
-                <span className="text-rose-400 font-bold">7:00 AM - 8:00 PM</span>
+              <div className="border-b border-slate-800 pb-3">
+                <div className="font-semibold mb-2 text-rose-400">SATURDAYS</div>
+                <div className="flex flex-col gap-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Morning</span>
+                    <span className="font-bold">5:00 AM - 11:00 AM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Evening</span>
+                    <span className="font-bold">5:00 PM - 7:30 PM</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span>Sunday</span>
-                <span className="text-rose-400 font-bold">8:00 AM - 6:00 PM</span>
-              </div>
-              <div className="flex justify-between pb-2">
-                <span>Public Holidays</span>
-                <span className="text-rose-400 font-bold">8:00 AM - 4:00 PM</span>
+              <div className="pt-2">
+                <div className="font-semibold mb-3 text-rose-400 flex items-center gap-2">
+                  <Clock size={18} />
+                  AEROBICS CLASSES
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Mondays</span>
+                    <span className="font-bold">6:00 AM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Wednesdays</span>
+                    <span className="font-bold">6:00 AM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Saturdays</span>
+                    <span className="font-bold">6:00 AM</span>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="mt-10 p-6 bg-slate-800 rounded-2xl flex items-center gap-4">
-              <Clock className="text-rose-500" />
-              <p className="text-sm">We are open 363 days a year. Only closed on Christmas Day and Good Friday.</p>
+            <div className="mt-8 p-6 bg-slate-800 rounded-2xl">
+              <p className="text-sm text-slate-300">Join us for energizing aerobics classes to kickstart your fitness journey!</p>
             </div>
             
             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-rose-600/20 rounded-full blur-3xl"></div>

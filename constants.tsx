@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   UserCircle,
   History,
-  Clock
+  Clock,
+  LogIn
 } from 'lucide-react';
 import { UserRole } from './types';
 
@@ -28,6 +29,7 @@ export const NAVIGATION_ITEMS = [
   { id: 'subscriptions', label: 'Subscriptions', icon: <Bell size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'payments', label: 'Payments', icon: <CreditCard size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'attendance', label: 'Attendance', icon: <Clock size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
+  { id: 'checkins', label: 'Client Check-Ins', icon: <LogIn size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'communications', label: 'Comms', icon: <MessageSquare size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'activity-logs', label: 'Activity Logs', icon: <History size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'content', label: 'Website CMS', icon: <ImageIcon size={20} />, roles: [UserRole.SUPER_ADMIN] },
