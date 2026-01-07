@@ -9,7 +9,8 @@
  */
 
 // Use relative URL for Vite proxy in development, or absolute URL in production
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
+// In production, if VITE_API_URL is not set, SMS features will be disabled
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : null);
 
 export interface WelcomeSMSParams {
   memberName: string;
@@ -40,6 +41,10 @@ export interface MessageSMSParams {
  * Send welcome SMS to new member
  */
 export const sendWelcomeSMS = async (params: WelcomeSMSParams): Promise<boolean> => {
+  if (!API_BASE_URL) {
+    console.warn('SMS service not configured: VITE_API_URL not set. SMS features disabled.');
+    return false;
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/api/send-welcome-sms`, {
       method: 'POST',
@@ -74,6 +79,10 @@ export const sendWelcomeSMS = async (params: WelcomeSMSParams): Promise<boolean>
  * Send payment confirmation SMS
  */
 export const sendPaymentSMS = async (params: PaymentSMSParams): Promise<boolean> => {
+  if (!API_BASE_URL) {
+    console.warn('SMS service not configured: VITE_API_URL not set. SMS features disabled.');
+    return false;
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/api/send-payment-sms`, {
       method: 'POST',
@@ -110,6 +119,17 @@ export const sendPaymentSMS = async (params: PaymentSMSParams): Promise<boolean>
  * Send general message SMS to member
  */
 export const sendMessageSMS = async (params: MessageSMSParams): Promise<{ success: boolean; error?: any }> => {
+  if (!API_BASE_URL) {
+    console.warn('SMS service not configured: VITE_API_URL not set. SMS features disabled.');
+    return { 
+      success: false, 
+      error: {
+        error: 'SMS service not configured',
+        message: 'VITE_API_URL environment variable is not set. Please configure the backend API URL to enable SMS features.',
+        suggestion: 'Set VITE_API_URL to your deployed backend server URL'
+      }
+    };
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/api/send-message-sms`, {
       method: 'POST',

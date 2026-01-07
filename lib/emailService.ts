@@ -13,7 +13,8 @@
 import { sendWelcomeSMS, sendPaymentSMS, sendMessageSMS } from './smsService';
 
 // Use relative URL for Vite proxy in development, or absolute URL in production
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3001');
+// In production, if VITE_API_URL is not set, email/SMS features will be disabled
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : null);
 
 export interface WelcomeEmailParams {
   memberName: string;
@@ -48,6 +49,10 @@ export interface MessageEmailParams {
  * Send welcome email to new member (and SMS if phone number provided)
  */
 export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<boolean> => {
+  if (!API_BASE_URL) {
+    console.warn('Email service not configured: VITE_API_URL not set. Email features disabled.');
+    return false;
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/api/send-welcome-email`, {
       method: 'POST',
@@ -99,6 +104,10 @@ export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<bool
  * Send payment confirmation email (and SMS if phone number provided)
  */
 export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<boolean> => {
+  if (!API_BASE_URL) {
+    console.warn('Email service not configured: VITE_API_URL not set. Email features disabled.');
+    return false;
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/api/send-payment-email`, {
       method: 'POST',
@@ -154,6 +163,17 @@ export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<bool
  * Send general message email to member (and SMS if phone number provided)
  */
 export const sendMessageEmail = async (params: MessageEmailParams): Promise<{ success: boolean; error?: any }> => {
+  if (!API_BASE_URL) {
+    console.warn('Email service not configured: VITE_API_URL not set. Email features disabled.');
+    return { 
+      success: false, 
+      error: {
+        error: 'Email service not configured',
+        message: 'VITE_API_URL environment variable is not set. Please configure the backend API URL to enable email features.',
+        suggestion: 'Set VITE_API_URL to your deployed backend server URL'
+      }
+    };
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/api/send-message-email`, {
       method: 'POST',
