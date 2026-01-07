@@ -10,7 +10,7 @@ This guide will help you connect your GoDaddy domain to your GitHub Pages site.
 
 ## Step 1: Configure Custom Domain in GitHub
 
-1. Go to your repository: `https://github.com/CaL7598/Goodlife-Ghana-Fitness-Gym-/settings/pages`
+1. Go to your repository: `https://github.com/CaL7598/Goodlife-gym/settings/pages`
 
 2. Under **"Custom domain"**, enter your domain name (e.g., `goodlifefitness.com` or `www.goodlifefitness.com`)
 
