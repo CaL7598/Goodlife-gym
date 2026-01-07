@@ -1,4 +1,5 @@
 
+// @ts-ignore - Optional dependency
 import { GoogleGenAI } from "@google/genai";
 
 // Get API key from environment variables (Vite uses import.meta.env, but we also check process.env for compatibility)

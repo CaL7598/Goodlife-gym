@@ -7,6 +7,7 @@ import {
   GalleryImage,
   ActivityLog,
   AttendanceRecord,
+  ClientCheckIn,
   SubscriptionPlan,
   PaymentMethod,
   PaymentStatus,
@@ -234,24 +235,6 @@ export const staffService = {
       console.error('Error deleting staff by email:', error);
       throw error;
     }
-  },
-
-  async create(staffData: Partial<StaffMember> & { password: string }): Promise<StaffMember> {
-    const dbData = mapStaffToDB(staffData);
-    dbData.password = staffData.password; // Include password in database insert
-    
-    const { data, error } = await supabase
-      .from('staff')
-      .insert(dbData)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creating staff:', error);
-      throw error;
-    }
-    
-    return mapStaffFromDB(data);
   },
 
   async create(staffData: Partial<StaffMember> & { password: string }): Promise<StaffMember> {
@@ -763,7 +746,7 @@ function mapPaymentToDB(payment: Partial<PaymentRecord>): any {
   if (payment.memberPhoto !== undefined && payment.memberPhoto !== null && payment.memberPhoto !== '') {
     db.member_photo = payment.memberPhoto;
   }
-  if (payment.memberPlan !== undefined && payment.memberPlan !== null && payment.memberPlan !== '') {
+  if (payment.memberPlan !== undefined && payment.memberPlan !== null) {
     db.member_plan = payment.memberPlan;
   }
   if (payment.memberStartDate !== undefined && payment.memberStartDate !== null && payment.memberStartDate !== '') {

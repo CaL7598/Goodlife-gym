@@ -160,18 +160,21 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
   }, [payments, revenuePeriod, customDateRange, showCustomRange]);
 
   // Algorithm-based analytics summary generator
-  const generateAnalyticsSummary = (stats: typeof stats, revenueData: typeof revenueData) => {
+  const generateAnalyticsSummary = (
+    statsData: { active: number; expiring: number; expired: number; revenue: number; total: number },
+    revenueDataValue: { totalRevenue: number; cashRevenue: number; momoRevenue: number; transactionCount: number; periodLabel: string; chartData: Array<{ date: string; amount: number; fullDate: string }>; payments: PaymentRecord[] }
+  ) => {
     const insights: string[] = [];
     
     // Member Status Analysis
-    const activePercentage = stats.total > 0 ? (stats.active / stats.total * 100).toFixed(1) : '0';
-    const expiringPercentage = stats.total > 0 ? (stats.expiring / stats.total * 100).toFixed(1) : '0';
-    const expiredPercentage = stats.total > 0 ? (stats.expired / stats.total * 100).toFixed(1) : '0';
+    const activePercentage = statsData.total > 0 ? (statsData.active / statsData.total * 100).toFixed(1) : '0';
+    const expiringPercentage = statsData.total > 0 ? (statsData.expiring / statsData.total * 100).toFixed(1) : '0';
+    const expiredPercentage = statsData.total > 0 ? (statsData.expired / statsData.total * 100).toFixed(1) : '0';
     
     insights.push(`📊 MEMBER STATUS OVERVIEW`);
-    insights.push(`Active Members: ${stats.active} (${activePercentage}%)`);
-    insights.push(`Expiring Soon: ${stats.expiring} (${expiringPercentage}%)`);
-    insights.push(`Expired: ${stats.expired} (${expiredPercentage}%)`);
+    insights.push(`Active Members: ${statsData.active} (${activePercentage}%)`);
+    insights.push(`Expiring Soon: ${statsData.expiring} (${expiringPercentage}%)`);
+    insights.push(`Expired: ${statsData.expired} (${expiredPercentage}%)`);
     insights.push(``);
     
     // Member Health Assessment
@@ -185,57 +188,57 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
     insights.push(``);
     
     // Expiring Members Alert
-    if (stats.expiring > 0) {
-      insights.push(`⚠️ ACTION REQUIRED: ${stats.expiring} member(s) expiring soon.`);
+    if (statsData.expiring > 0) {
+      insights.push(`⚠️ ACTION REQUIRED: ${statsData.expiring} member(s) expiring soon.`);
       insights.push(`Recommendation: Send renewal reminders and offer incentives.`);
       insights.push(``);
     }
     
     // Revenue Analysis
     insights.push(`💰 REVENUE ANALYSIS`);
-    insights.push(`Total Revenue (All Time): ₵${stats.revenue.toLocaleString()}`);
-    insights.push(`Period Revenue (${revenueData.periodLabel}): ₵${revenueData.totalRevenue.toLocaleString()}`);
+    insights.push(`Total Revenue (All Time): ₵${statsData.revenue.toLocaleString()}`);
+    insights.push(`Period Revenue (${revenueDataValue.periodLabel}): ₵${revenueDataValue.totalRevenue.toLocaleString()}`);
     
-    if (revenueData.transactionCount > 0) {
-      const avgTransaction = revenueData.totalRevenue / revenueData.transactionCount;
+    if (revenueDataValue.transactionCount > 0) {
+      const avgTransaction = revenueDataValue.totalRevenue / revenueDataValue.transactionCount;
       insights.push(`Average Transaction: ₵${avgTransaction.toFixed(0)}`);
-      insights.push(`Total Transactions: ${revenueData.transactionCount}`);
+      insights.push(`Total Transactions: ${revenueDataValue.transactionCount}`);
     }
     insights.push(``);
     
     // Payment Method Breakdown
-    if (revenueData.totalRevenue > 0) {
-      const cashPercentage = (revenueData.cashRevenue / revenueData.totalRevenue * 100).toFixed(1);
-      const momoPercentage = (revenueData.momoRevenue / revenueData.totalRevenue * 100).toFixed(1);
+    if (revenueDataValue.totalRevenue > 0) {
+      const cashPercentage = (revenueDataValue.cashRevenue / revenueDataValue.totalRevenue * 100).toFixed(1);
+      const momoPercentage = (revenueDataValue.momoRevenue / revenueDataValue.totalRevenue * 100).toFixed(1);
       insights.push(`💳 PAYMENT METHOD BREAKDOWN`);
-      insights.push(`Cash: ₵${revenueData.cashRevenue.toLocaleString()} (${cashPercentage}%)`);
-      insights.push(`Mobile Money: ₵${revenueData.momoRevenue.toLocaleString()} (${momoPercentage}%)`);
+      insights.push(`Cash: ₵${revenueDataValue.cashRevenue.toLocaleString()} (${cashPercentage}%)`);
+      insights.push(`Mobile Money: ₵${revenueDataValue.momoRevenue.toLocaleString()} (${momoPercentage}%)`);
       insights.push(``);
     }
     
     // Business Health Recommendations
     insights.push(`🎯 RECOMMENDATIONS`);
     
-    if (stats.expiring >= 5) {
-      insights.push(`1. Focus on member retention - ${stats.expiring} members expiring soon`);
+    if (statsData.expiring >= 5) {
+      insights.push(`1. Focus on member retention - ${statsData.expiring} members expiring soon`);
     }
     
-    if (stats.expired > stats.active * 0.3) {
+    if (statsData.expired > statsData.active * 0.3) {
       insights.push(`2. High expired member count - Consider re-engagement campaigns`);
     }
     
-    if (revenueData.totalRevenue > 0 && stats.active > 0) {
-      const revenuePerActiveMember = revenueData.totalRevenue / stats.active;
+    if (revenueDataValue.totalRevenue > 0 && statsData.active > 0) {
+      const revenuePerActiveMember = revenueDataValue.totalRevenue / statsData.active;
       if (revenuePerActiveMember < 150) {
         insights.push(`3. Low revenue per active member (₵${revenuePerActiveMember.toFixed(0)}) - Consider upselling premium plans`);
       }
     }
     
-    if (stats.active < 10) {
+    if (statsData.active < 10) {
       insights.push(`4. Low active member count - Focus on new member acquisition`);
     }
     
-    if (stats.expiring === 0 && stats.active > 0) {
+    if (statsData.expiring === 0 && statsData.active > 0) {
       insights.push(`5. Great job! No expiring members - Continue maintaining member satisfaction`);
     }
     
