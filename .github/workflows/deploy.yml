@@ -38,6 +38,33 @@ jobs:
           VITE_BASE_PATH: /
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        continue-on-error: false
+      
+      - name: Verify build output
+        run: |
+          echo "=== Build Verification ==="
+          echo "Checking if dist folder exists:"
+          test -d dist && echo "✓ dist folder exists" || (echo "✗ dist folder missing!" && exit 1)
+          echo ""
+          echo "Listing dist contents:"
+          ls -la dist/
+          echo ""
+          echo "Checking index.html exists:"
+          test -f dist/index.html && echo "✓ index.html exists" || (echo "✗ index.html missing!" && exit 1)
+          echo ""
+          echo "Checking index.html content (first 30 lines):"
+          head -30 dist/index.html
+          echo ""
+          echo "Checking for compiled JS files:"
+          ls -la dist/assets/*.js 2>/dev/null && echo "✓ JS files found" || (echo "✗ No JS files found!" && exit 1)
+          echo ""
+          echo "Verifying index.html references compiled JS (not .tsx):"
+          if grep -q "index\.tsx" dist/index.html; then
+            echo "✗ ERROR: index.html still references index.tsx!"
+            exit 1
+          else
+            echo "✓ index.html correctly references compiled JS"
+          fi
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -46,13 +73,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
-      
-      - name: Verify build output
-        run: |
-          echo "Build output contents:"
-          ls -la dist/
-          echo "Checking index.html:"
-          cat dist/index.html | head -20
 
   deploy:
     environment:
