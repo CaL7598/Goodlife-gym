@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: '/Goodlife-Ghana-Fitness-Gym-/',
+      // Use root path for custom domain, or repo path for GitHub Pages subdomain
+      base: process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/' : '/Goodlife-Ghana-Fitness-Gym-/'),
       server: {
         port: 3000,
         host: '0.0.0.0',
