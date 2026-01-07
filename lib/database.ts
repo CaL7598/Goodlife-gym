@@ -15,10 +15,18 @@ import {
   Privilege
 } from '../types';
 
+// Helper function to check if Supabase is configured
+function requireSupabase() {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+  }
+  return supabase;
+}
+
 // Members
 export const membersService = {
   async getAll(): Promise<Member[]> {
-    const { data, error } = await supabase
+    const { data, error } = await requireSupabase()
       .from('members')
       .select('*')
       .order('created_at', { ascending: false });
