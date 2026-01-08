@@ -29,17 +29,30 @@ const homeImages: Record<string, string> = {};
 
 // Map image filenames to variables
 Object.entries(homeImageModules).forEach(([path, module]: [string, any]) => {
-  const filename = path.split('/').pop()?.toLowerCase() || '';
+  const filename = path.split('/').pop() || '';
+  const filenameLower = filename.toLowerCase();
   const imageUrl = typeof module === 'string' ? module : module.default || module;
-  if (filename.includes('cardio')) {
+  
+  // Match by filename (case-insensitive)
+  if (filenameLower === 'cardio.png' || filenameLower.includes('cardio')) {
     homeImages['cardio'] = imageUrl;
-  } else if (filename.includes('strength')) {
+  } else if (filenameLower === 'strength.jpg' || filenameLower.includes('strength')) {
     homeImages['strength'] = imageUrl;
   }
 });
 
 const cardioImage = homeImages['cardio'] || '';
 const strengthImage = homeImages['strength'] || '';
+
+// Debug: Log what we found
+if (Object.keys(homeImageModules).length > 0) {
+  console.log('Found home images:', Object.keys(homeImageModules));
+  console.log('Mapped images:', homeImages);
+  console.log('Cardio image URL:', cardioImage);
+  console.log('Strength image URL:', strengthImage);
+} else {
+  console.warn('No images found in Home images folder! Check the path.');
+}
 
 const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurrentPage }) => {
   return (
