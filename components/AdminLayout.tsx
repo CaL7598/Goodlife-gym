@@ -205,8 +205,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             >
               {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <h1 className="ml-2 sm:ml-4 text-base sm:text-lg font-semibold text-slate-800 capitalize truncate">
-              {currentPage.replace('-', ' ')}
+            <h1 className="ml-2 sm:ml-4 text-base sm:text-lg font-semibold text-slate-800 truncate">
+              Goodlife Fitness Ghana{currentPage !== 'dashboard' && ` | ${currentPage.replace('-', ' ')}`}
             </h1>
           </div>
 
