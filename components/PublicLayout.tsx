@@ -16,6 +16,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
     { id: 'about', label: 'About' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'plans', label: 'Plans' },
+    { id: 'equipment', label: 'Equipment' },
     { id: 'announcements', label: 'News' },
     { id: 'contact', label: 'Contact' },
     { id: 'checkin', label: 'Check In' },
@@ -113,6 +114,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
               <ul className="space-y-2 text-sm">
                 <li><button onClick={() => setCurrentPage('plans')} className="hover:text-rose-400">Memberships</button></li>
                 <li><button onClick={() => setCurrentPage('gallery')} className="hover:text-rose-400">Facility Tour</button></li>
+                <li><button onClick={() => setCurrentPage('equipment')} className="hover:text-rose-400">Equipment & Repair</button></li>
                 <li><button onClick={() => setCurrentPage('announcements')} className="hover:text-rose-400">Announcements</button></li>
               </ul>
             </div>

@@ -44,6 +44,7 @@ import About from './pages/About';
 import Gallery from './pages/Gallery';
 import Announcements from './pages/Announcements';
 import Contact from './pages/Contact';
+import Equipment from './pages/Equipment';
 import MembershipPlans from './pages/MembershipPlans';
 import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
@@ -380,6 +381,7 @@ const App: React.FC = () => {
         case 'gallery': return <Gallery gallery={gallery} />;
         case 'announcements': return <Announcements announcements={announcements} />;
         case 'contact': return <Contact />;
+        case 'equipment': return <Equipment />;
         case 'plans': return <MembershipPlans setCurrentPage={setCurrentPage} />;
         case 'checkin': return <CheckIn />;
         case 'checkout': {
