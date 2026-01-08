@@ -17,8 +17,20 @@ ADD COLUMN IF NOT EXISTS member_address TEXT;
 ALTER TABLE payments 
 ADD COLUMN IF NOT EXISTS member_photo TEXT;
 
+-- Drop existing constraint if it exists (in case migration was run before)
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_member_plan_check;
+
+-- Add column with updated constraint to include all plan types
 ALTER TABLE payments 
-ADD COLUMN IF NOT EXISTS member_plan TEXT CHECK (member_plan IN ('Basic', 'Premium', 'VIP'));
+ADD COLUMN IF NOT EXISTS member_plan TEXT;
+
+-- Add constraint with all valid plan names
+ALTER TABLE payments 
+ADD CONSTRAINT payments_member_plan_check 
+CHECK (member_plan IS NULL OR member_plan IN (
+  'Basic', 'Premium', 'VIP',  -- Legacy plans
+  'Monthly', '2 Weeks', '1 Week', 'Day Morning', 'Day Evening'  -- Current plans
+));
 
 ALTER TABLE payments 
 ADD COLUMN IF NOT EXISTS member_start_date DATE;
