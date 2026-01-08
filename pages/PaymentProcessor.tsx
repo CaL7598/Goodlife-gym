@@ -113,8 +113,12 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        if (supabaseUrl && supabaseKey) {
-          try {
+        if (!supabaseUrl || !supabaseKey) {
+          showError('Database not configured. Cannot create member. Please configure Supabase.');
+          return;
+        }
+
+        try {
             // Check if member already exists by email
             let existingMember = await membersService.getByEmail(memberToCreate.email);
             let createdMember: Member;
@@ -143,8 +147,14 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
               }
             } else {
               // Member doesn't exist, create new one
-              createdMember = await membersService.create(memberToCreate);
-              console.log('✅ Member created:', createdMember.id);
+              try {
+                createdMember = await membersService.create(memberToCreate);
+                console.log('✅ Member created:', createdMember.id);
+              } catch (createError: any) {
+                console.error('❌ Error creating member:', createError);
+                showError(`Failed to create member: ${createError?.message || 'Unknown error'}. Payment not confirmed.`);
+                return; // Don't proceed with payment confirmation
+              }
             }
             
             // Update local state if member not already in list
@@ -203,7 +213,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
               });
             }
             
-            showSuccess(`Payment confirmed and member ${pay.memberName} has been ${existingMember ? 'linked' : 'added'}!`);
+            showSuccess(`Payment confirmed and member ${pay.memberName} has been ${existingMember ? 'linked' : 'created'} successfully!`);
             // Refresh payments to get updated list
             await refreshPayments();
             return;
@@ -246,10 +256,6 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             return;
           }
         } else {
-          showError('Database not configured. Cannot create member.');
-          return;
-        }
-      } else {
         // Regular payment confirmation (member already exists)
         const updatedPayment = {
           ...pay,

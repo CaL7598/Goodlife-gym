@@ -224,22 +224,18 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         // Save to Supabase database
         createdMember = await membersService.create(memberData);
         console.log('✅ Member saved to Supabase:', createdMember.id);
-      } catch (error) {
+        showSuccess(`Member ${createdMember.fullName} has been successfully registered!`);
+      } catch (error: any) {
         console.error('❌ Error saving member to Supabase:', error);
-        // Fallback: create member with local ID if Supabase fails
-        createdMember = {
-          ...memberData,
-          id: Math.random().toString(36).substr(2, 9)
-        } as Member;
-        console.warn('⚠️ Using local state fallback');
+        // Show error to user - don't create local fallback as it won't persist
+        const errorMessage = error?.message || 'Failed to save member to database';
+        showError(`Failed to save member: ${errorMessage}. Please check your connection and try again.`);
+        return; // Don't proceed with local state update
       }
     } else {
-      // No Supabase configured, use local state only
-      createdMember = {
-        ...memberData,
-        id: Math.random().toString(36).substr(2, 9)
-      } as Member;
-      console.log('📝 Member saved to local state only (Supabase not configured)');
+      // No Supabase configured, show warning
+      showError('Database not configured. Please configure Supabase to save members permanently.');
+      return; // Don't create local-only members as they won't persist
     }
 
     // Update local state
@@ -383,25 +379,26 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
             emergencyContact: memberData.emergencyContact
           };
 
-          let createdMember: Member;
+          if (!hasSupabase) {
+            errors.push(`${memberData.fullName}: Database not configured. Cannot import members.`);
+            failedCount++;
+            continue;
+          }
 
-          if (hasSupabase) {
-            try {
-              createdMember = await membersService.create(memberToCreate);
-            } catch (error: any) {
-              // If duplicate email, skip this member
-              if (error?.message?.includes('duplicate') || error?.code === '23505') {
-                errors.push(`${memberData.fullName}: Email already exists`);
-                failedCount++;
-                continue;
-              }
-              throw error;
+          let createdMember: Member;
+          try {
+            createdMember = await membersService.create(memberToCreate);
+          } catch (error: any) {
+            // If duplicate email, skip this member
+            if (error?.message?.includes('duplicate') || error?.code === '23505') {
+              errors.push(`${memberData.fullName}: Email already exists`);
+              failedCount++;
+              continue;
             }
-          } else {
-            createdMember = {
-              ...memberToCreate,
-              id: Math.random().toString(36).substr(2, 9)
-            } as Member;
+            // For other errors, log and skip
+            errors.push(`${memberData.fullName}: ${error?.message || 'Failed to create member'}`);
+            failedCount++;
+            continue;
           }
 
           // Update local state

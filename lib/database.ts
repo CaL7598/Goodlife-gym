@@ -40,7 +40,7 @@ export const membersService = {
   },
 
   async getById(id: string): Promise<Member | null> {
-    const { data, error } = await supabase
+    const { data, error } = await requireSupabase()
       .from('members')
       .select('*')
       .eq('id', id)
@@ -55,7 +55,7 @@ export const membersService = {
   },
 
   async getByEmail(email: string): Promise<Member | null> {
-    const { data, error } = await supabase
+    const { data, error } = await requireSupabase()
       .from('members')
       .select('*')
       .eq('email', email)
@@ -74,7 +74,7 @@ export const membersService = {
   },
 
   async create(member: Omit<Member, 'id'>): Promise<Member> {
-    const { data, error } = await supabase
+    const { data, error } = await requireSupabase()
       .from('members')
       .insert(mapMemberToDB(member))
       .select()
@@ -89,7 +89,7 @@ export const membersService = {
   },
 
   async update(id: string, updates: Partial<Member>): Promise<Member> {
-    const { data, error } = await supabase
+    const { data, error } = await requireSupabase()
       .from('members')
       .update({
         ...mapMemberToDB(updates as Member),
@@ -108,7 +108,7 @@ export const membersService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await requireSupabase()
       .from('members')
       .delete()
       .eq('id', id);
