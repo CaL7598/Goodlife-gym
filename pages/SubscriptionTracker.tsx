@@ -20,7 +20,8 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
     if (!member) return;
     
     const now = new Date();
-    const startDate = now.toISOString().split('T')[0];
+    // Get start date in local timezone to avoid UTC conversion issues
+    const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const expiryDate = calculateExpiryDate(member.plan, startDate);
 
     setMembers(members.map(m => m.id === id ? {

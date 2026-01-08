@@ -125,8 +125,8 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
       const now = new Date();
       const paymentAmount = totalAmount;
       
-      // Get start date as string (YYYY-MM-DD) to avoid timezone issues
-      const startDateStr = now.toISOString().split('T')[0];
+      // Get start date as string (YYYY-MM-DD) in local timezone to avoid timezone issues
+      const startDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       
       // Calculate expiry date based on plan (will be used when member is created)
       const expiryDate = calculateExpiryDate(selectedPlan.name, startDateStr);
@@ -143,7 +143,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
         memberStartDate: startDateStr,
         memberExpiryDate: expiryDate,
         amount: paymentAmount,
-        date: now.toISOString().split('T')[0],
+        date: startDateStr,
         method: paymentData.method,
         status: PaymentStatus.PENDING, // Will be confirmed by admin
         transactionId: paymentData.transactionId,

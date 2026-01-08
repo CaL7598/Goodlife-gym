@@ -91,7 +91,10 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       // If this is a pending member registration, create the member first
       if (pay.isPendingMember && pay.memberEmail) {
         const plan = (pay.memberPlan || SubscriptionPlan.BASIC) as SubscriptionPlan;
-        const startDate = pay.memberStartDate || new Date().toISOString().split('T')[0];
+        // Use local timezone for default start date if not provided
+        const now = new Date();
+        const defaultStartDate = pay.memberStartDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const startDate = pay.memberStartDate || defaultStartDate;
         const expiryDate = pay.memberExpiryDate || calculateExpiryDate(plan, startDate);
         
         const memberToCreate = {
@@ -304,7 +307,10 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       memberId: member.id,
       memberName: member.fullName,
       amount: newPay.amount || 0,
-      date: new Date().toISOString().split('T')[0],
+      date: (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })(),
       method: newPay.method as PaymentMethod,
       status: newPay.method === PaymentMethod.CASH ? PaymentStatus.CONFIRMED : PaymentStatus.PENDING,
       confirmedBy: newPay.method === PaymentMethod.CASH ? 'Staff' : undefined,
