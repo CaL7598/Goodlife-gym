@@ -956,32 +956,11 @@ function mapClientCheckInToDB(checkIn: Partial<ClientCheckIn>): any {
 }
 
 function mapEquipmentFromDB(db: any): GymEquipment {
-  let features: string[] | undefined = undefined;
-  if (db.features) {
-    try {
-      const parsed = JSON.parse(db.features);
-      if (Array.isArray(parsed)) {
-        features = parsed;
-      }
-    } catch (error) {
-      console.error('Error parsing equipment features:', error);
-    }
-  }
-
   return {
     id: db.id,
     name: db.name,
-    category: db.category,
-    description: db.description,
-    price: db.price,
-    imageUrl: db.image_url,
-    features: features,
-    status: db.status,
-    location: db.location,
-    purchaseDate: db.purchase_date,
-    warrantyExpiry: db.warranty_expiry,
-    serialNumber: db.serial_number,
-    notes: db.notes,
+    state: db.state,
+    condition: db.condition,
     created_at: db.created_at,
     updated_at: db.updated_at
   };
@@ -990,18 +969,7 @@ function mapEquipmentFromDB(db: any): GymEquipment {
 function mapEquipmentToDB(equipment: Partial<GymEquipment>): any {
   const db: any = {};
   if (equipment.name !== undefined) db.name = equipment.name;
-  if (equipment.category !== undefined) db.category = equipment.category;
-  if (equipment.description !== undefined) db.description = equipment.description;
-  if (equipment.price !== undefined) db.price = equipment.price;
-  if (equipment.imageUrl !== undefined) db.image_url = equipment.imageUrl;
-  if (equipment.features !== undefined) {
-    db.features = Array.isArray(equipment.features) ? JSON.stringify(equipment.features) : equipment.features;
-  }
-  if (equipment.status !== undefined) db.status = equipment.status;
-  if (equipment.location !== undefined) db.location = equipment.location;
-  if (equipment.purchaseDate !== undefined) db.purchase_date = equipment.purchaseDate;
-  if (equipment.warrantyExpiry !== undefined) db.warranty_expiry = equipment.warrantyExpiry;
-  if (equipment.serialNumber !== undefined) db.serial_number = equipment.serialNumber;
-  if (equipment.notes !== undefined) db.notes = equipment.notes;
+  if (equipment.state !== undefined) db.state = equipment.state;
+  if (equipment.condition !== undefined) db.condition = equipment.condition;
   return db;
 }

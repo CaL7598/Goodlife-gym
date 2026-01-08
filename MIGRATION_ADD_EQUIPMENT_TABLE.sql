@@ -1,34 +1,33 @@
 -- Migration: Add Equipment table for gym equipment management
 -- Run this in your Supabase SQL Editor
+-- This migration will drop the existing table if it exists and create a new one with the simplified schema
 
--- Create equipment table
-CREATE TABLE IF NOT EXISTS equipment (
+-- Drop existing trigger and function if they exist (do this first before dropping table)
+DROP TRIGGER IF EXISTS update_equipment_timestamp ON equipment;
+DROP FUNCTION IF EXISTS update_equipment_updated_at() CASCADE;
+
+-- Drop existing table if it exists (this will delete all existing data)
+DROP TABLE IF EXISTS equipment CASCADE;
+
+-- Create equipment table with simplified schema
+CREATE TABLE equipment (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('Cardio', 'Strength', 'Free Weights', 'Accessories')),
-  description TEXT NOT NULL,
-  price TEXT,
-  image_url TEXT,
-  features TEXT, -- JSON array stored as text
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'maintenance', 'retired')),
-  location TEXT,
-  purchase_date DATE,
-  warranty_expiry DATE,
-  serial_number TEXT,
-  notes TEXT,
+  state TEXT NOT NULL CHECK (state IN ('old', 'new')),
+  condition TEXT NOT NULL CHECK (condition IN ('faulty', 'non-faulty')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment(category);
-CREATE INDEX IF NOT EXISTS idx_equipment_status ON equipment(status);
-CREATE INDEX IF NOT EXISTS idx_equipment_location ON equipment(location);
+CREATE INDEX idx_equipment_state ON equipment(state);
+CREATE INDEX idx_equipment_condition ON equipment(condition);
 
 -- Enable Row Level Security
 ALTER TABLE equipment ENABLE ROW LEVEL SECURITY;
 
--- Create policy (allow all for now - adjust based on your security needs)
+-- Drop existing policy if it exists, then create new one
+DROP POLICY IF EXISTS "Allow all operations on equipment" ON equipment;
 CREATE POLICY "Allow all operations on equipment" ON equipment FOR ALL USING (true) WITH CHECK (true);
 
 -- Add trigger to update updated_at timestamp

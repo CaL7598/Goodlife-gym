@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GymEquipment, UserRole } from '../types';
-import { Search, Plus, Edit2, Trash2, X, Save, Image as ImageIcon, AlertCircle, CheckCircle2, Wrench, Activity } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Save, AlertCircle, CheckCircle2, Activity } from 'lucide-react';
 import { equipmentService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -14,7 +14,8 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
   const { showSuccess, showError } = useToast();
   const [equipment, setEquipment] = useState<GymEquipment[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [filterState, setFilterState] = useState<string>('all');
+  const [filterCondition, setFilterCondition] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<GymEquipment | null>(null);
@@ -27,15 +28,9 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
 
   const [newEquipment, setNewEquipment] = useState<Partial<GymEquipment>>({
     name: '',
-    category: 'Cardio',
-    description: '',
-    price: '',
-    status: 'active',
-    location: '',
-    features: []
+    state: 'new',
+    condition: 'non-faulty'
   });
-
-  const categories = ['all', 'Cardio', 'Strength', 'Free Weights', 'Accessories'];
 
   // Load equipment from database
   useEffect(() => {
@@ -65,8 +60,8 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
   const handleAddEquipment = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newEquipment.name || !newEquipment.category || !newEquipment.description) {
-      showError('Please fill in all required fields (Name, Category, Description)');
+    if (!newEquipment.name || !newEquipment.state || !newEquipment.condition) {
+      showError('Please fill in all required fields (Name, State, Condition)');
       return;
     }
 
@@ -81,32 +76,19 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
 
       const created = await equipmentService.create({
         name: newEquipment.name!,
-        category: newEquipment.category!,
-        description: newEquipment.description!,
-        price: newEquipment.price,
-        imageUrl: newEquipment.imageUrl,
-        features: newEquipment.features || [],
-        status: newEquipment.status || 'active',
-        location: newEquipment.location,
-        purchaseDate: newEquipment.purchaseDate,
-        warrantyExpiry: newEquipment.warrantyExpiry,
-        serialNumber: newEquipment.serialNumber,
-        notes: newEquipment.notes
+        state: newEquipment.state as 'old' | 'new',
+        condition: newEquipment.condition as 'faulty' | 'non-faulty'
       });
 
       setEquipment(prev => [created, ...prev]);
-      logActivity('Add Equipment', `Added equipment: ${created.name} (${created.category})`, 'admin');
+      logActivity('Add Equipment', `Added equipment: ${created.name} (${created.state}, ${created.condition})`, 'admin');
       showSuccess(`Equipment "${created.name}" added successfully!`);
 
       // Reset form
       setNewEquipment({
         name: '',
-        category: 'Cardio',
-        description: '',
-        price: '',
-        status: 'active',
-        location: '',
-        features: []
+        state: 'new',
+        condition: 'non-faulty'
       });
       setShowAddModal(false);
     } catch (error: any) {
@@ -127,17 +109,8 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
     try {
       const updated = await equipmentService.update(editingEquipment.id, {
         name: editingEquipment.name,
-        category: editingEquipment.category,
-        description: editingEquipment.description,
-        price: editingEquipment.price,
-        imageUrl: editingEquipment.imageUrl,
-        features: editingEquipment.features,
-        status: editingEquipment.status,
-        location: editingEquipment.location,
-        purchaseDate: editingEquipment.purchaseDate,
-        warrantyExpiry: editingEquipment.warrantyExpiry,
-        serialNumber: editingEquipment.serialNumber,
-        notes: editingEquipment.notes
+        state: editingEquipment.state,
+        condition: editingEquipment.condition
       });
 
       setEquipment(prev => prev.map(eq => eq.id === updated.id ? updated : eq));
@@ -171,42 +144,21 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
     });
   };
 
-  const addFeature = (feature: string) => {
-    if (!feature.trim()) return;
-    if (editingEquipment) {
-      setEditingEquipment({
-        ...editingEquipment,
-        features: [...(editingEquipment.features || []), feature.trim()]
-      });
-    } else {
-      setNewEquipment({
-        ...newEquipment,
-        features: [...(newEquipment.features || []), feature.trim()]
-      });
-    }
-  };
-
-  const removeFeature = (index: number) => {
-    if (editingEquipment) {
-      setEditingEquipment({
-        ...editingEquipment,
-        features: editingEquipment.features?.filter((_, i) => i !== index) || []
-      });
-    } else {
-      setNewEquipment({
-        ...newEquipment,
-        features: newEquipment.features?.filter((_, i) => i !== index) || []
-      });
-    }
-  };
-
   const filteredEquipment = equipment.filter(eq => {
-    const matchesSearch = eq.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         eq.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         eq.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || eq.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesSearch = eq.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesState = filterState === 'all' || eq.state === filterState;
+    const matchesCondition = filterCondition === 'all' || eq.condition === filterCondition;
+    return matchesSearch && matchesState && matchesCondition;
   });
+
+  // Calculate statistics
+  const stats = {
+    total: equipment.length,
+    new: equipment.filter(eq => eq.state === 'new').length,
+    old: equipment.filter(eq => eq.state === 'old').length,
+    faulty: equipment.filter(eq => eq.condition === 'faulty').length,
+    nonFaulty: equipment.filter(eq => eq.condition === 'non-faulty').length
+  };
 
   if (isLoading) {
     return (
@@ -224,8 +176,8 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Equipment Management</h1>
-          <p className="text-slate-600 mt-1">Manage all gym equipment inventory</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Equipment Inventory</h1>
+          <p className="text-slate-600 mt-1">Track all gym equipment and their condition</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -236,6 +188,30 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
         </button>
       </div>
 
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <p className="text-slate-600 text-sm mb-1">Total Equipment</p>
+          <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <p className="text-slate-600 text-sm mb-1">New</p>
+          <p className="text-2xl font-bold text-green-600">{stats.new}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <p className="text-slate-600 text-sm mb-1">Old</p>
+          <p className="text-2xl font-bold text-amber-600">{stats.old}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <p className="text-slate-600 text-sm mb-1">Faulty</p>
+          <p className="text-2xl font-bold text-red-600">{stats.faulty}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <p className="text-slate-600 text-sm mb-1">Non-Faulty</p>
+          <p className="text-2xl font-bold text-green-600">{stats.nonFaulty}</p>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -244,7 +220,7 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <input
                 type="text"
-                placeholder="Search equipment..."
+                placeholder="Search equipment by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
@@ -252,263 +228,151 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </button>
-            ))}
+            <select
+              value={filterState}
+              onChange={(e) => setFilterState(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="all">All States</option>
+              <option value="new">New</option>
+              <option value="old">Old</option>
+            </select>
+            <select
+              value={filterCondition}
+              onChange={(e) => setFilterCondition(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="all">All Conditions</option>
+              <option value="non-faulty">Non-Faulty</option>
+              <option value="faulty">Faulty</option>
+            </select>
           </div>
         </div>
       </div>
 
-      {/* Equipment Grid */}
+      {/* Equipment Table */}
       {filteredEquipment.length === 0 ? (
         <div className="bg-white p-12 rounded-lg shadow-sm border border-slate-200 text-center">
           <Activity className="mx-auto text-slate-400 mb-4" size={48} />
           <p className="text-slate-600 text-lg">No equipment found</p>
           <p className="text-slate-500 text-sm mt-2">
-            {searchTerm || selectedCategory !== 'all' 
+            {searchTerm || filterState !== 'all' || filterCondition !== 'all'
               ? 'Try adjusting your search or filters' 
               : 'Add your first piece of equipment to get started'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEquipment.map((eq) => (
-            <div key={eq.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow">
-              {eq.imageUrl && (
-                <div className="h-48 bg-slate-100 overflow-hidden">
-                  <img src={eq.imageUrl} alt={eq.name} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-slate-900">{eq.name}</h3>
-                    <span className="inline-block px-2 py-1 bg-rose-100 text-rose-600 text-xs font-semibold rounded mt-1">
-                      {eq.category}
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEditClick(eq)}
-                      className="p-1 text-slate-600 hover:text-rose-600 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(eq)}
-                      className="p-1 text-slate-600 hover:text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-slate-600 text-sm mb-3 line-clamp-2">{eq.description}</p>
-                {eq.price && (
-                  <p className="text-rose-600 font-bold mb-2">{eq.price}</p>
-                )}
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className={`px-2 py-1 rounded ${
-                    eq.status === 'active' ? 'bg-green-100 text-green-700' :
-                    eq.status === 'maintenance' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-slate-100 text-slate-700'
-                  }`}>
-                    {eq.status}
-                  </span>
-                  {eq.location && <span>📍 {eq.location}</span>}
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">State</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Condition</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {filteredEquipment.map((eq) => (
+                  <tr key={eq.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-slate-900">{eq.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        eq.state === 'new' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {eq.state === 'new' ? 'New' : 'Old'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center gap-1 w-fit ${
+                        eq.condition === 'non-faulty' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-red-100 text-red-700'
+                      }`}>
+                        {eq.condition === 'non-faulty' ? (
+                          <CheckCircle2 size={14} />
+                        ) : (
+                          <AlertCircle size={14} />
+                        )}
+                        {eq.condition === 'non-faulty' ? 'Non-Faulty' : 'Faulty'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEditClick(eq)}
+                          className="text-rose-600 hover:text-rose-900 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(eq)}
+                          className="text-red-600 hover:text-red-900 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Add Equipment Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex justify-between items-center">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="border-b border-slate-200 p-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-900">Add New Equipment</h2>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={24} />
               </button>
             </div>
             <form onSubmit={handleAddEquipment} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
-                  <input
-                    type="text"
-                    value={newEquipment.name || ''}
-                    onChange={(e) => setNewEquipment({...newEquipment, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
-                  <select
-                    value={newEquipment.category || 'Cardio'}
-                    onChange={(e) => setNewEquipment({...newEquipment, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                    required
-                  >
-                    <option value="Cardio">Cardio</option>
-                    <option value="Strength">Strength</option>
-                    <option value="Free Weights">Free Weights</option>
-                    <option value="Accessories">Accessories</option>
-                  </select>
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description *</label>
-                <textarea
-                  value={newEquipment.description || ''}
-                  onChange={(e) => setNewEquipment({...newEquipment, description: e.target.value})}
+                <label className="block text-sm font-medium text-slate-700 mb-1">Equipment Name *</label>
+                <input
+                  type="text"
+                  value={newEquipment.name || ''}
+                  onChange={(e) => setNewEquipment({...newEquipment, name: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  rows={3}
+                  placeholder="e.g., Treadmill, Dumbbells, Bench Press"
                   required
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
-                  <input
-                    type="text"
-                    value={newEquipment.price || ''}
-                    onChange={(e) => setNewEquipment({...newEquipment, price: e.target.value})}
-                    placeholder="₵15,000"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                  <select
-                    value={newEquipment.status || 'active'}
-                    onChange={(e) => setNewEquipment({...newEquipment, status: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="retired">Retired</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
-                  <input
-                    type="text"
-                    value={newEquipment.imageUrl || ''}
-                    onChange={(e) => setNewEquipment({...newEquipment, imageUrl: e.target.value})}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                  <input
-                    type="text"
-                    value={newEquipment.location || ''}
-                    onChange={(e) => setNewEquipment({...newEquipment, location: e.target.value})}
-                    placeholder="Sunyani Airport Branch"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Date</label>
-                  <input
-                    type="date"
-                    value={newEquipment.purchaseDate || ''}
-                    onChange={(e) => setNewEquipment({...newEquipment, purchaseDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Warranty Expiry</label>
-                  <input
-                    type="date"
-                    value={newEquipment.warrantyExpiry || ''}
-                    onChange={(e) => setNewEquipment({...newEquipment, warrantyExpiry: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Serial Number</label>
-                <input
-                  type="text"
-                  value={newEquipment.serialNumber || ''}
-                  onChange={(e) => setNewEquipment({...newEquipment, serialNumber: e.target.value})}
+                <label className="block text-sm font-medium text-slate-700 mb-1">State *</label>
+                <select
+                  value={newEquipment.state || 'new'}
+                  onChange={(e) => setNewEquipment({...newEquipment, state: e.target.value as 'old' | 'new'})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                />
+                  required
+                >
+                  <option value="new">New</option>
+                  <option value="old">Old</option>
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Features</label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    placeholder="Add a feature..."
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addFeature(e.currentTarget.value);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                      if (input) {
-                        addFeature(input.value);
-                        input.value = '';
-                      }
-                    }}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
-                  >
-                    Add
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(newEquipment.features || []).map((feature, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-sm flex items-center gap-2">
-                      {feature}
-                      <button
-                        type="button"
-                        onClick={() => removeFeature(idx)}
-                        className="hover:text-rose-900"
-                      >
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                <textarea
-                  value={newEquipment.notes || ''}
-                  onChange={(e) => setNewEquipment({...newEquipment, notes: e.target.value})}
+                <label className="block text-sm font-medium text-slate-700 mb-1">Condition *</label>
+                <select
+                  value={newEquipment.condition || 'non-faulty'}
+                  onChange={(e) => setNewEquipment({...newEquipment, condition: e.target.value as 'faulty' | 'non-faulty'})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  rows={2}
-                />
+                  required
+                >
+                  <option value="non-faulty">Non-Faulty</option>
+                  <option value="faulty">Faulty</option>
+                </select>
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <button
@@ -534,175 +398,47 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
       {/* Edit Equipment Modal */}
       {showEditModal && editingEquipment && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex justify-between items-center">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="border-b border-slate-200 p-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-900">Edit Equipment</h2>
               <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={24} />
               </button>
             </div>
             <form onSubmit={handleUpdateEquipment} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
-                  <input
-                    type="text"
-                    value={editingEquipment.name}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
-                  <select
-                    value={editingEquipment.category}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                    required
-                  >
-                    <option value="Cardio">Cardio</option>
-                    <option value="Strength">Strength</option>
-                    <option value="Free Weights">Free Weights</option>
-                    <option value="Accessories">Accessories</option>
-                  </select>
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description *</label>
-                <textarea
-                  value={editingEquipment.description}
-                  onChange={(e) => setEditingEquipment({...editingEquipment, description: e.target.value})}
+                <label className="block text-sm font-medium text-slate-700 mb-1">Equipment Name *</label>
+                <input
+                  type="text"
+                  value={editingEquipment.name}
+                  onChange={(e) => setEditingEquipment({...editingEquipment, name: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  rows={3}
                   required
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
-                  <input
-                    type="text"
-                    value={editingEquipment.price || ''}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, price: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                  <select
-                    value={editingEquipment.status}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, status: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="retired">Retired</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
-                  <input
-                    type="text"
-                    value={editingEquipment.imageUrl || ''}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, imageUrl: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                  <input
-                    type="text"
-                    value={editingEquipment.location || ''}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, location: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Date</label>
-                  <input
-                    type="date"
-                    value={editingEquipment.purchaseDate || ''}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, purchaseDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Warranty Expiry</label>
-                  <input
-                    type="date"
-                    value={editingEquipment.warrantyExpiry || ''}
-                    onChange={(e) => setEditingEquipment({...editingEquipment, warrantyExpiry: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Serial Number</label>
-                <input
-                  type="text"
-                  value={editingEquipment.serialNumber || ''}
-                  onChange={(e) => setEditingEquipment({...editingEquipment, serialNumber: e.target.value})}
+                <label className="block text-sm font-medium text-slate-700 mb-1">State *</label>
+                <select
+                  value={editingEquipment.state}
+                  onChange={(e) => setEditingEquipment({...editingEquipment, state: e.target.value as 'old' | 'new'})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                />
+                  required
+                >
+                  <option value="new">New</option>
+                  <option value="old">Old</option>
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Features</label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    placeholder="Add a feature..."
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addFeature(e.currentTarget.value);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                      if (input) {
-                        addFeature(input.value);
-                        input.value = '';
-                      }
-                    }}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
-                  >
-                    Add
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(editingEquipment.features || []).map((feature, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-sm flex items-center gap-2">
-                      {feature}
-                      <button
-                        type="button"
-                        onClick={() => removeFeature(idx)}
-                        className="hover:text-rose-900"
-                      >
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                <textarea
-                  value={editingEquipment.notes || ''}
-                  onChange={(e) => setEditingEquipment({...editingEquipment, notes: e.target.value})}
+                <label className="block text-sm font-medium text-slate-700 mb-1">Condition *</label>
+                <select
+                  value={editingEquipment.condition}
+                  onChange={(e) => setEditingEquipment({...editingEquipment, condition: e.target.value as 'faulty' | 'non-faulty'})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                  rows={2}
-                />
+                  required
+                >
+                  <option value="non-faulty">Non-Faulty</option>
+                  <option value="faulty">Faulty</option>
+                </select>
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <button
