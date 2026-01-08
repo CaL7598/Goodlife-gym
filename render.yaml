@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: goodlife-backend-api
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Add these environment variables in Render dashboard:
+      # RESEND_API_KEY
+      # RESEND_FROM_EMAIL
+      # TWILIO_ACCOUNT_SID
+      # TWILIO_AUTH_TOKEN
+      # TWILIO_PHONE_NUMBER
