@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus, SubscriptionPlan } from '../types';
-import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPlus, AlertCircle } from 'lucide-react';
+import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPlus, AlertCircle, RefreshCw } from 'lucide-react';
 import { sendPaymentEmail, sendWelcomeEmail } from '../lib/emailService';
 import { membersService, paymentsService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
@@ -19,6 +19,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
   const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState<'history' | 'momo'>('history');
   const [showPayModal, setShowPayModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newPay, setNewPay] = useState<Partial<PaymentRecord>>({
     memberId: '',
     amount: 0,
@@ -30,6 +31,27 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     momoPhone: '',
     network: ''
   });
+
+  // Function to refresh payments from Supabase
+  const refreshPayments = async () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return; // Can't refresh if Supabase not configured
+    }
+
+    setIsRefreshing(true);
+    try {
+      const paymentsData = await paymentsService.getAll();
+      setPayments(paymentsData);
+      console.log('✅ Payments refreshed:', paymentsData.length);
+    } catch (error) {
+      console.error('Error refreshing payments:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Clear form fields on component mount (page refresh)
   useEffect(() => {
@@ -44,7 +66,21 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       momoPhone: '',
       network: ''
     });
+    
+    // Refresh payments when component mounts
+    refreshPayments();
   }, []);
+
+  // Auto-refresh payments every 30 seconds when on Mobile Money Verification tab
+  useEffect(() => {
+    if (activeTab === 'momo') {
+      const interval = setInterval(() => {
+        refreshPayments();
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [activeTab]);
 
   const handleConfirmPayment = async (id: string) => {
     const pay = payments.find(p => p.id === id);
@@ -160,6 +196,8 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             }
             
             showSuccess(`Payment confirmed and member ${pay.memberName} has been ${existingMember ? 'linked' : 'added'}!`);
+            // Refresh payments to get updated list
+            await refreshPayments();
             return;
           } catch (error: any) {
             console.error('Error creating member:', error);
@@ -240,6 +278,10 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             expiryDate: member.expiryDate
           });
         }
+        
+        showSuccess(`Payment confirmed!`);
+        // Refresh payments to get updated list
+        await refreshPayments();
       }
     } catch (error: any) {
       console.error('Error confirming payment:', error);
@@ -311,13 +353,24 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-900">Payment Center</h2>
-        <button 
-          onClick={() => setShowPayModal(true)}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 shadow-sm"
-        >
-          <CreditCard size={20} />
-          Record New Payment
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={refreshPayments}
+            disabled={isRefreshing}
+            className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Refresh payments list"
+          >
+            <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button 
+            onClick={() => setShowPayModal(true)}
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 shadow-sm"
+          >
+            <CreditCard size={20} />
+            Record New Payment
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
