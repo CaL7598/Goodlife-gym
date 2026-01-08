@@ -3,6 +3,7 @@ import { SubscriptionPlan, PaymentMethod, PaymentStatus } from '../types';
 import { ArrowLeft, CreditCard, Smartphone, X, CheckCircle2, AlertCircle, Copy, Check, Image as ImageIcon, User } from 'lucide-react';
 import { paymentsService } from '../lib/database';
 import { MOBILE_MONEY_NUMBER } from '../constants';
+import { calculateExpiryDate } from '../lib/dateUtils';
 
 interface CheckoutProps {
   selectedPlan: {
@@ -124,13 +125,11 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
       const now = new Date();
       const paymentAmount = totalAmount;
       
+      // Get start date as string (YYYY-MM-DD) to avoid timezone issues
+      const startDateStr = now.toISOString().split('T')[0];
+      
       // Calculate expiry date based on plan (will be used when member is created)
-      const expiry = new Date();
-      if (selectedPlan.name === SubscriptionPlan.VIP) {
-        expiry.setMonth(now.getMonth() + 6); // 6 months for VIP
-      } else {
-        expiry.setMonth(now.getMonth() + 1); // 1 month for Basic/Premium
-      }
+      const expiryDate = calculateExpiryDate(selectedPlan.name, startDateStr);
 
       // Create payment record WITHOUT memberId - member will be created after admin confirms
       const paymentRecord = {
@@ -141,8 +140,8 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
         memberAddress: memberData.address,
         memberPhoto: memberData.photo, // Store photo for member creation
         memberPlan: selectedPlan.name,
-        memberStartDate: now.toISOString().split('T')[0],
-        memberExpiryDate: expiry.toISOString().split('T')[0],
+        memberStartDate: startDateStr,
+        memberExpiryDate: expiryDate,
         amount: paymentAmount,
         date: now.toISOString().split('T')[0],
         method: paymentData.method,

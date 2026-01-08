@@ -5,6 +5,7 @@ import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPl
 import { sendPaymentEmail, sendWelcomeEmail } from '../lib/emailService';
 import { membersService, paymentsService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
+import { calculateExpiryDate } from '../lib/dateUtils';
 
 interface PaymentProcessorProps {
   payments: PaymentRecord[];
@@ -89,15 +90,19 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     try {
       // If this is a pending member registration, create the member first
       if (pay.isPendingMember && pay.memberEmail) {
+        const plan = (pay.memberPlan || SubscriptionPlan.BASIC) as SubscriptionPlan;
+        const startDate = pay.memberStartDate || new Date().toISOString().split('T')[0];
+        const expiryDate = pay.memberExpiryDate || calculateExpiryDate(plan, startDate);
+        
         const memberToCreate = {
           fullName: pay.memberName,
           email: pay.memberEmail,
           phone: pay.memberPhone || '',
           address: pay.memberAddress,
           photo: pay.memberPhoto, // Include photo from payment record
-          plan: (pay.memberPlan || SubscriptionPlan.BASIC) as SubscriptionPlan,
-          startDate: pay.memberStartDate || new Date().toISOString().split('T')[0],
-          expiryDate: pay.memberExpiryDate || new Date().toISOString().split('T')[0],
+          plan,
+          startDate,
+          expiryDate,
           status: 'active' as const
         };
 

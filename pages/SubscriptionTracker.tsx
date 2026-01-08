@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Member, UserRole } from '../types';
 import { Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { calculateExpiryDate } from '../lib/dateUtils';
 
 const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: UserRole; logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void }> = ({ members, setMembers, role, logActivity }) => {
   const { showSuccess } = useToast();
@@ -16,19 +17,21 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
 
   const handleRenew = (id: string) => {
     const member = members.find(m => m.id === id);
+    if (!member) return;
+    
     const now = new Date();
-    const expiry = new Date();
-    expiry.setMonth(now.getMonth() + 1);
+    const startDate = now.toISOString().split('T')[0];
+    const expiryDate = calculateExpiryDate(member.plan, startDate);
 
     setMembers(members.map(m => m.id === id ? {
       ...m,
       status: 'active',
-      startDate: now.toISOString().split('T')[0],
-      expiryDate: expiry.toISOString().split('T')[0]
+      startDate,
+      expiryDate
     } : m));
 
-    logActivity('Manual Renewal', `Extended subscription for ${member?.fullName} until ${expiry.toISOString().split('T')[0]}`, 'admin');
-    showSuccess(`Subscription renewed successfully for ${member?.fullName}!`);
+    logActivity('Manual Renewal', `Extended subscription for ${member.fullName} until ${expiryDate}`, 'admin');
+    showSuccess(`Subscription renewed successfully for ${member.fullName}!`);
   };
 
   return (
