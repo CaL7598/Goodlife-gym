@@ -134,7 +134,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
 
       // Create payment record WITHOUT memberId - member will be created after admin confirms
       const paymentRecord = {
-        memberId: '', // Empty - will be set when admin confirms and creates member
+        memberId: null as any, // Null - will be set when admin confirms and creates member
         memberName: memberData.fullName,
         memberEmail: memberData.email, // Store email for member creation later
         memberPhone: memberData.phone,

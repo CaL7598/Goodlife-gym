@@ -289,15 +289,19 @@ export const paymentsService = {
     
     if (error) {
       console.error('Error creating payment:', error);
+      console.error('Payment data that failed:', JSON.stringify(mapPaymentToDB(payment), null, 2));
       // Check if error is about missing columns
-      if (error.message && error.message.includes('is_pending_member')) {
+      if (error.message && (error.message.includes('is_pending_member') || error.message.includes('column') || error.message.includes('does not exist'))) {
         const helpfulError = new Error(
           'Database schema is missing required columns. Please run the migration: MIGRATION_ADD_PENDING_MEMBER_FIELDS.sql in your Supabase SQL Editor.'
         );
         helpfulError.name = 'SCHEMA_MIGRATION_REQUIRED';
         throw helpfulError;
       }
-      throw error;
+      // Provide more detailed error information
+      const detailedError = new Error(`Failed to create payment: ${error.message || JSON.stringify(error)}`);
+      (detailedError as any).originalError = error;
+      throw detailedError;
     }
     
     return mapPaymentFromDB(data);
@@ -728,7 +732,10 @@ function mapPaymentFromDB(db: any): PaymentRecord {
 
 function mapPaymentToDB(payment: Partial<PaymentRecord>): any {
   const db: any = {};
-  if (payment.memberId !== undefined) db.member_id = payment.memberId || null;
+  // Handle memberId - convert empty string to null, or use null if undefined for pending members
+  if (payment.memberId !== undefined) {
+    db.member_id = (payment.memberId === '' || payment.memberId === null) ? null : payment.memberId;
+  }
   if (payment.memberName !== undefined) db.member_name = payment.memberName;
   if (payment.amount !== undefined) db.amount = payment.amount;
   if (payment.date !== undefined) db.date = payment.date;
