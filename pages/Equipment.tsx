@@ -224,7 +224,7 @@ const Equipment: React.FC = () => {
                 <ShoppingCart className="w-5 h-5" />
                 Browse Equipment
               </a>
-              <a href="#repair" className="px-8 py-4 bg-white text-rose-600 border-2 border-rose-600 font-bold rounded-lg hover:bg-rose-50 transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center gap-2">
+              <a href="tel:+233246458898" className="px-8 py-4 bg-white text-rose-600 border-2 border-rose-600 font-bold rounded-lg hover:bg-rose-50 transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center gap-2">
                 <Wrench className="w-5 h-5" />
                 Repair Services
               </a>
@@ -293,10 +293,10 @@ const Equipment: React.FC = () => {
                       </li>
                     ))}
                   </ul>
-                  <button className="w-full py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-rose-600 transition-all flex items-center justify-center gap-2">
+                  <a href="tel:+233246458898" className="w-full py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-rose-600 transition-all flex items-center justify-center gap-2">
                     <Phone className="w-5 h-5" />
                     Inquire Now
-                  </button>
+                  </a>
                 </div>
               </div>
             ))}
@@ -446,10 +446,10 @@ const Equipment: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <button className="mt-6 w-full sm:w-auto px-8 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center gap-2">
+                    <a href="tel:+233246458898" className="mt-6 w-full sm:w-auto px-8 py-3 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center gap-2">
                       <Phone className="w-5 h-5" />
                       Schedule Repair Service
-                    </button>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -466,7 +466,7 @@ const Equipment: React.FC = () => {
             Contact us today for equipment inquiries or to schedule a repair service. We're here to help you achieve your fitness goals.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="tel:+233XXXXXXXXX" className="px-8 py-4 bg-white text-rose-600 font-bold rounded-lg hover:bg-slate-100 transition-all shadow-xl inline-flex items-center justify-center gap-2">
+            <a href="tel:+233246458898" className="px-8 py-4 bg-white text-rose-600 font-bold rounded-lg hover:bg-slate-100 transition-all shadow-xl inline-flex items-center justify-center gap-2">
               <Phone className="w-5 h-5" />
               Call Us Now
             </a>
