@@ -23,9 +23,9 @@ import {
 import video1 from '../video/13749263_3840_2160_24fps.mp4';
 import video2 from '../video/4746006-uhd_3840_2160_25fps.mp4';
 
-// Import images from home images folder
-import cardioImage from '../home images/cardio.png';
-import strengthImage from '../home images/Strength.jpg';
+// Import images from Home images folder
+import cardioImage from '../Home images/cardio.png';
+import strengthImage from '../Home images/Strength.jpg';
 
 const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurrentPage }) => {
   return (
