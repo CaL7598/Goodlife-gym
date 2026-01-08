@@ -143,6 +143,24 @@ export interface ClientCheckIn {
   notes?: string;
 }
 
+export interface GymEquipment {
+  id: string;
+  name: string;
+  category: string; // Cardio, Strength, Free Weights, Accessories
+  description: string;
+  price?: string;
+  imageUrl?: string;
+  features?: string[]; // JSON array stored as text
+  status: 'active' | 'maintenance' | 'retired';
+  location?: string; // Which branch/location
+  purchaseDate?: string;
+  warrantyExpiry?: string;
+  serialNumber?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface AppState {
   userRole: UserRole;
   members: Member[];

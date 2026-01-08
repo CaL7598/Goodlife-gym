@@ -13,7 +13,8 @@ import {
   UserCircle,
   History,
   Clock,
-  LogIn
+  LogIn,
+  Dumbbell
 } from 'lucide-react';
 import { UserRole } from './types';
 
@@ -34,6 +35,7 @@ export const NAVIGATION_ITEMS = [
   { id: 'activity-logs', label: 'Activity Logs', icon: <History size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'staff', label: 'Staff', icon: <UserCircle size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'content', label: 'Website CMS', icon: <ImageIcon size={20} />, roles: [UserRole.SUPER_ADMIN] },
+  { id: 'equipment-manager', label: 'Equipment', icon: <Dumbbell size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.SUPER_ADMIN] },
 ];
 

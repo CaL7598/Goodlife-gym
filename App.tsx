@@ -29,7 +29,8 @@ import {
   galleryService,
   activityLogsService,
   attendanceService,
-  clientCheckInService
+  clientCheckInService,
+  equipmentService
 } from './lib/database';
 import { supabase } from './lib/supabase';
 
@@ -58,6 +59,7 @@ import ActivityLogs from './pages/ActivityLogs';
 import AttendanceManager from './pages/AttendanceManager';
 import PrivilegeManager from './pages/PrivilegeManager';
 import StaffManager from './pages/StaffManager';
+import EquipmentManager from './pages/EquipmentManager';
 import CheckIn from './pages/CheckIn';
 import CheckInManager from './pages/CheckInManager';
 
@@ -441,6 +443,10 @@ const App: React.FC = () => {
           announcements={announcements} 
           setAnnouncements={setAnnouncements} 
           role={userRole} 
+        />;
+        case 'equipment-manager': return <EquipmentManager 
+          role={userRole}
+          logActivity={logActivity}
         />;
         case 'staff': return <StaffManager 
           staff={staff} 

@@ -8,6 +8,7 @@ import {
   ActivityLog,
   AttendanceRecord,
   ClientCheckIn,
+  GymEquipment,
   SubscriptionPlan,
   PaymentMethod,
   PaymentStatus,
@@ -590,6 +591,84 @@ export const clientCheckInService = {
   }
 };
 
+// Equipment
+export const equipmentService = {
+  async getAll(): Promise<GymEquipment[]> {
+    const { data, error } = await requireSupabase()
+      .from('equipment')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching equipment:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapEquipmentFromDB);
+  },
+
+  async getById(id: string): Promise<GymEquipment | null> {
+    const { data, error } = await requireSupabase()
+      .from('equipment')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching equipment:', error);
+      return null;
+    }
+    
+    return data ? mapEquipmentFromDB(data) : null;
+  },
+
+  async create(equipment: Omit<GymEquipment, 'id'>): Promise<GymEquipment> {
+    const { data, error } = await requireSupabase()
+      .from('equipment')
+      .insert(mapEquipmentToDB(equipment))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating equipment:', error);
+      throw error;
+    }
+    
+    return mapEquipmentFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<GymEquipment>): Promise<GymEquipment> {
+    const { data, error } = await requireSupabase()
+      .from('equipment')
+      .update({
+        ...mapEquipmentToDB(updates as GymEquipment),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating equipment:', error);
+      throw error;
+    }
+    
+    return mapEquipmentFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('equipment')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting equipment:', error);
+      throw error;
+    }
+  }
+};
+
 // Mapper functions to convert between DB format and app format
 function mapMemberFromDB(db: any): Member {
   return {
@@ -876,3 +955,53 @@ function mapClientCheckInToDB(checkIn: Partial<ClientCheckIn>): any {
   return db;
 }
 
+function mapEquipmentFromDB(db: any): GymEquipment {
+  let features: string[] | undefined = undefined;
+  if (db.features) {
+    try {
+      const parsed = JSON.parse(db.features);
+      if (Array.isArray(parsed)) {
+        features = parsed;
+      }
+    } catch (error) {
+      console.error('Error parsing equipment features:', error);
+    }
+  }
+
+  return {
+    id: db.id,
+    name: db.name,
+    category: db.category,
+    description: db.description,
+    price: db.price,
+    imageUrl: db.image_url,
+    features: features,
+    status: db.status,
+    location: db.location,
+    purchaseDate: db.purchase_date,
+    warrantyExpiry: db.warranty_expiry,
+    serialNumber: db.serial_number,
+    notes: db.notes,
+    created_at: db.created_at,
+    updated_at: db.updated_at
+  };
+}
+
+function mapEquipmentToDB(equipment: Partial<GymEquipment>): any {
+  const db: any = {};
+  if (equipment.name !== undefined) db.name = equipment.name;
+  if (equipment.category !== undefined) db.category = equipment.category;
+  if (equipment.description !== undefined) db.description = equipment.description;
+  if (equipment.price !== undefined) db.price = equipment.price;
+  if (equipment.imageUrl !== undefined) db.image_url = equipment.imageUrl;
+  if (equipment.features !== undefined) {
+    db.features = Array.isArray(equipment.features) ? JSON.stringify(equipment.features) : equipment.features;
+  }
+  if (equipment.status !== undefined) db.status = equipment.status;
+  if (equipment.location !== undefined) db.location = equipment.location;
+  if (equipment.purchaseDate !== undefined) db.purchase_date = equipment.purchaseDate;
+  if (equipment.warrantyExpiry !== undefined) db.warranty_expiry = equipment.warrantyExpiry;
+  if (equipment.serialNumber !== undefined) db.serial_number = equipment.serialNumber;
+  if (equipment.notes !== undefined) db.notes = equipment.notes;
+  return db;
+}
