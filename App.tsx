@@ -219,14 +219,15 @@ const App: React.FC = () => {
           checkIns: checkInsData.length
         });
 
-        if (membersData.length > 0) setMembers(membersData);
-        if (staffData.length > 0) setStaff(staffData);
-        if (paymentsData.length > 0) setPayments(paymentsData);
-        if (announcementsData.length > 0) setAnnouncements(announcementsData);
-        if (galleryData.length > 0) setGallery(galleryData);
-        if (logsData.length > 0) setActivityLogs(logsData);
-        if (attendanceData.length > 0) setAttendanceRecords(attendanceData);
-        if (checkInsData.length > 0) setClientCheckIns(checkInsData);
+        // Always set data, even if empty, to ensure state is synced with database
+        setMembers(membersData);
+        setStaff(staffData);
+        setPayments(paymentsData);
+        setAnnouncements(announcementsData);
+        setGallery(galleryData);
+        setActivityLogs(logsData);
+        setAttendanceRecords(attendanceData);
+        setClientCheckIns(checkInsData);
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
         // Fall back to local state if Supabase fails
@@ -433,7 +434,7 @@ const App: React.FC = () => {
           />
         );
         case 'members': return <MemberManager members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
-        case 'payments': return <PaymentProcessor payments={payments} setPayments={setPayments} members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
+        case 'payments': return <PaymentProcessor payments={payments} setPayments={setPayments} members={members} setMembers={setMembers} role={userRole} userEmail={userEmail} staff={staff} logActivity={logActivity} />;
         case 'subscriptions': return <SubscriptionTracker members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
         case 'communications': return <CommunicationCenter members={members} />;
         case 'activity-logs': return <ActivityLogs logs={activityLogs} />;

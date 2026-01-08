@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus, SubscriptionPlan } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus, SubscriptionPlan, StaffMember } from '../types';
 import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPlus, AlertCircle, RefreshCw } from 'lucide-react';
 import { sendPaymentEmail, sendWelcomeEmail } from '../lib/emailService';
 import { membersService, paymentsService } from '../lib/database';
@@ -13,10 +13,12 @@ interface PaymentProcessorProps {
   members: Member[];
   setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
   role: UserRole;
+  userEmail: string;
+  staff: StaffMember[];
   logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void;
 }
 
-const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPayments, members, setMembers, role, logActivity }) => {
+const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPayments, members, setMembers, role, userEmail, staff, logActivity }) => {
   const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState<'history' | 'momo'>('history');
   const [showPayModal, setShowPayModal] = useState(false);
@@ -32,6 +34,19 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     momoPhone: '',
     network: ''
   });
+  
+  // Get current staff member for confirmation tracking
+  const currentStaff = useMemo(() => {
+    return staff.find(s => s.email === userEmail);
+  }, [staff, userEmail]);
+  
+  // Get staff name for confirmedBy field
+  const getConfirmedByName = (): string => {
+    if (role === UserRole.SUPER_ADMIN) {
+      return currentStaff?.fullName || 'Admin';
+    }
+    return currentStaff?.fullName || 'Staff';
+  };
 
   // Function to refresh payments from Supabase
   const refreshPayments = async () => {
@@ -164,18 +179,19 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             });
             
             // Update payment with memberId
+            const confirmedByName = getConfirmedByName();
             const updatedPayment = {
               ...pay,
               memberId: createdMember.id,
               status: PaymentStatus.CONFIRMED,
-              confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+              confirmedBy: confirmedByName
             };
             
             // Update payment in database
             await paymentsService.update(id, {
               memberId: createdMember.id,
               status: PaymentStatus.CONFIRMED,
-              confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+              confirmedBy: confirmedByName
             });
             
             // Update local state
@@ -226,17 +242,18 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
                 const existingMember = await membersService.getByEmail(memberToCreate.email);
                 if (existingMember) {
                   // Use existing member and continue with payment confirmation
+                  const confirmedByName = getConfirmedByName();
                   const updatedPayment = {
                     ...pay,
                     memberId: existingMember.id,
                     status: PaymentStatus.CONFIRMED,
-                    confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+                    confirmedBy: confirmedByName
                   };
                   
                   await paymentsService.update(id, {
                     memberId: existingMember.id,
                     status: PaymentStatus.CONFIRMED,
-                    confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+                    confirmedBy: confirmedByName
                   });
                   
                   setPayments(prev => prev.map(p => p.id === id ? updatedPayment : p));
@@ -257,10 +274,11 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
           }
         } else {
         // Regular payment confirmation (member already exists)
+        const confirmedByName = getConfirmedByName();
         const updatedPayment = {
           ...pay,
           status: PaymentStatus.CONFIRMED,
-          confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+          confirmedBy: confirmedByName
         };
         
         // Update payment in database
@@ -270,7 +288,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
         if (supabaseUrl && supabaseKey) {
           await paymentsService.update(id, {
             status: PaymentStatus.CONFIRMED,
-            confirmedBy: role === UserRole.SUPER_ADMIN ? 'Admin' : 'Staff'
+            confirmedBy: confirmedByName
           });
         }
         
@@ -306,64 +324,77 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     const member = members.find(m => m.id === newPay.memberId);
-    if (!member) return;
-
-    const payment: PaymentRecord = {
-      id: `PAY-${Date.now()}`,
-      memberId: member.id,
-      memberName: member.fullName,
-      amount: newPay.amount || 0,
-      date: (() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      })(),
-      method: newPay.method as PaymentMethod,
-      status: newPay.method === PaymentMethod.CASH ? PaymentStatus.CONFIRMED : PaymentStatus.PENDING,
-      confirmedBy: newPay.method === PaymentMethod.CASH ? 'Staff' : undefined,
-      // Include mobile money details if method is Mobile Money
-      ...(newPay.method === PaymentMethod.MOMO && {
-        transactionId: momoDetails.transactionId || undefined,
-        momoPhone: momoDetails.momoPhone || undefined,
-        network: momoDetails.network || undefined
-      })
-    };
-
-    setPayments(prev => [payment, ...prev]);
-    logActivity('Record Payment', `Logged ₵${payment.amount} ${payment.method} entry for ${member.fullName}`, 'financial');
-    
-    // Send payment confirmation email if payment is confirmed (Cash payments)
-    if (payment.status === PaymentStatus.CONFIRMED && member.email) {
-      const emailSent = await sendPaymentEmail({
-        memberName: payment.memberName,
-        memberEmail: member.email,
-        memberPhone: member.phone, // Include phone for SMS
-        amount: payment.amount,
-        paymentMethod: payment.method,
-        paymentDate: payment.date,
-        transactionId: payment.transactionId,
-        expiryDate: member.expiryDate
-      });
-      
-      if (emailSent) {
-        console.log(`Payment confirmation email sent to ${member.email}`);
-      } else {
-        console.warn(`Failed to send payment email to ${member.email}`);
-      }
+    if (!member) {
+      showError('Please select a member');
+      return;
     }
-    
-    // Reset form
-    setNewPay({
-      memberId: '',
-      amount: 0,
-      method: PaymentMethod.CASH,
-      status: PaymentStatus.CONFIRMED
-    });
-    setMomoDetails({
-      transactionId: '',
-      momoPhone: '',
-      network: ''
-    });
-    setShowPayModal(false);
+
+    try {
+      // Create payment object without ID - database will generate UUID
+      const paymentData: Omit<PaymentRecord, 'id'> = {
+        memberId: member.id,
+        memberName: member.fullName,
+        amount: newPay.amount || 0,
+        date: (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })(),
+        method: newPay.method as PaymentMethod,
+        status: newPay.method === PaymentMethod.CASH ? PaymentStatus.CONFIRMED : PaymentStatus.PENDING,
+        confirmedBy: newPay.method === PaymentMethod.CASH ? 'Staff' : undefined,
+        // Include mobile money details if method is Mobile Money
+        ...(newPay.method === PaymentMethod.MOMO && {
+          transactionId: momoDetails.transactionId || undefined,
+          momoPhone: momoDetails.momoPhone || undefined,
+          network: momoDetails.network || undefined
+        })
+      };
+
+      // Save payment to database first (database will generate UUID)
+      const createdPayment = await paymentsService.create(paymentData);
+      
+      // Update local state with the payment returned from database (includes UUID)
+      setPayments(prev => [createdPayment, ...prev]);
+      showSuccess(`Payment of ₵${createdPayment.amount} recorded successfully`);
+      logActivity('Record Payment', `Logged ₵${createdPayment.amount} ${createdPayment.method} entry for ${member.fullName}`, 'financial');
+      
+      // Send payment confirmation email if payment is confirmed (Cash payments)
+      if (createdPayment.status === PaymentStatus.CONFIRMED && member.email) {
+        const emailSent = await sendPaymentEmail({
+          memberName: createdPayment.memberName,
+          memberEmail: member.email,
+          memberPhone: member.phone, // Include phone for SMS
+          amount: createdPayment.amount,
+          paymentMethod: createdPayment.method,
+          paymentDate: createdPayment.date,
+          transactionId: createdPayment.transactionId,
+          expiryDate: member.expiryDate
+        });
+        
+        if (emailSent) {
+          console.log(`Payment confirmation email sent to ${member.email}`);
+        } else {
+          console.warn(`Failed to send payment email to ${member.email}`);
+        }
+      }
+      
+      // Reset form
+      setNewPay({
+        memberId: '',
+        amount: 0,
+        method: PaymentMethod.CASH,
+        status: PaymentStatus.CONFIRMED
+      });
+      setMomoDetails({
+        transactionId: '',
+        momoPhone: '',
+        network: ''
+      });
+      setShowPayModal(false);
+    } catch (error: any) {
+      console.error('Error recording payment:', error);
+      showError(`Failed to record payment: ${error.message || 'Unknown error'}`);
+    }
   };
 
   return (
