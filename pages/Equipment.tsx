@@ -387,11 +387,11 @@ const Equipment: React.FC = () => {
 
                 {/* Technician Details */}
                 <div className="md:w-3/5 p-8 sm:p-12">
-                  <h3 className="text-3xl font-bold text-slate-900 mb-2">Kwame Mensah</h3>
-                  <p className="text-xl text-rose-600 font-semibold mb-6">Senior Equipment Technician</p>
+                  <h3 className="text-3xl font-bold text-slate-900 mb-2">Ibrahim Kabore</h3>
+                  <p className="text-xl text-rose-600 font-semibold mb-6">Operation Manager / Equipment Technician</p>
                   
                   <p className="text-slate-600 mb-6 leading-relaxed">
-                    With over 15 years of experience in gym equipment repair and maintenance, Kwame is our lead technician specializing in all major fitness equipment brands. His expertise spans from complex treadmill motor repairs to precision cable system adjustments.
+                    With extensive experience in gym equipment repair and maintenance, Ibrahim is our lead technician specializing in all major fitness equipment brands. His expertise spans from complex treadmill motor repairs to precision cable system adjustments.
                   </p>
 
                   <div className="space-y-4 mb-8">
@@ -422,9 +422,9 @@ const Equipment: React.FC = () => {
                   <div className="border-t border-slate-200 pt-6">
                     <h4 className="font-bold text-slate-900 mb-4">Get in Touch</h4>
                     <div className="space-y-3">
-                      <a href="tel:+233551336976" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
+                      <a href="tel:+233246458898" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
                         <Phone className="w-5 h-5 text-rose-600" />
-                        <span className="font-medium">+233 55 133 6976</span>
+                        <span className="font-medium">+233 24 645 8898</span>
                       </a>
                       <a href="mailto:goodlifeghana13@gmail.com" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
                         <Mail className="w-5 h-5 text-rose-600" />
