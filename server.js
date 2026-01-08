@@ -231,7 +231,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
                         <p style="color: #ffffff; font-size: 16px; font-weight: bold; margin: 0 0 15px 0;">GOODLIFE FITNESS</p>
                         <p style="margin: 15px 0;">
                           <a href="#" style="color: #dc2626; text-decoration: none; margin: 0 10px;">Visit Our Website</a> | 
-                          <a href="mailto:hello@goodlifefitness.com" style="color: #dc2626; text-decoration: none; margin: 0 10px;">Email Us</a> | 
+                          <a href="mailto:goodlifeghana13@gmail.com" style="color: #dc2626; text-decoration: none; margin: 0 10px;">Email Us</a> | 
                           <a href="tel:+233551336976" style="color: #dc2626; text-decoration: none; margin: 0 10px;">0551336976</a>
                         </p>
                         <p style="margin: 10px 0; font-size: 12px; color: #9ca3af;">

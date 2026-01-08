@@ -409,13 +409,13 @@ const Equipment: React.FC = () => {
                   <div className="border-t border-slate-200 pt-6">
                     <h4 className="font-bold text-slate-900 mb-4">Get in Touch</h4>
                     <div className="space-y-3">
-                      <a href="tel:+233XXXXXXXXX" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
+                      <a href="tel:+233551336976" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
                         <Phone className="w-5 h-5 text-rose-600" />
-                        <span className="font-medium">+233 XX XXX XXXX</span>
+                        <span className="font-medium">+233 55 133 6976</span>
                       </a>
-                      <a href="mailto:repair@goodlifefitnessghana.com" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
+                      <a href="mailto:goodlifeghana13@gmail.com" className="flex items-center gap-3 text-slate-700 hover:text-rose-600 transition-colors">
                         <Mail className="w-5 h-5 text-rose-600" />
-                        <span className="font-medium">repair@goodlifefitnessghana.com</span>
+                        <span className="font-medium">goodlifeghana13@gmail.com</span>
                       </a>
                       <div className="flex items-start gap-3">
                         <MapPin className="w-5 h-5 text-rose-600 flex-shrink-0 mt-1" />
@@ -449,7 +449,7 @@ const Equipment: React.FC = () => {
               <Phone className="w-5 h-5" />
               Call Us Now
             </a>
-            <a href="mailto:equipment@goodlifefitnessghana.com" className="px-8 py-4 bg-rose-800 text-white border-2 border-white font-bold rounded-lg hover:bg-rose-900 transition-all shadow-xl inline-flex items-center justify-center gap-2">
+            <a href="mailto:goodlifeghana13@gmail.com" className="px-8 py-4 bg-rose-800 text-white border-2 border-white font-bold rounded-lg hover:bg-rose-900 transition-all shadow-xl inline-flex items-center justify-center gap-2">
               <Mail className="w-5 h-5" />
               Send Email
             </a>
