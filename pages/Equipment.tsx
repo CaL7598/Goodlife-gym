@@ -16,6 +16,19 @@ import {
   Zap
 } from 'lucide-react';
 
+// Import equipment images from Equipment folder
+const equipmentImageModules = import.meta.glob('../Equipment/*.{png,jpg,jpeg}', { eager: true });
+const equipmentImages: Record<string, string> = {};
+
+// Map image filenames to equipment names
+Object.entries(equipmentImageModules).forEach(([path, module]: [string, any]) => {
+  // Extract filename without extension
+  const filename = path.split('/').pop()?.replace(/\.(png|jpg|jpeg)$/i, '') || '';
+  const imageUrl = typeof module === 'string' ? module : module.default || module;
+  // Store with the exact filename (will match equipment names)
+  equipmentImages[filename] = imageUrl;
+});
+
 interface Equipment {
   id: string;
   name: string;
@@ -43,7 +56,7 @@ const Equipment: React.FC = () => {
       id: '1',
       name: 'Treadmill Pro 3000',
       category: 'Cardio',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Treadmill Pro 3000'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
       price: '₵15,000',
       description: 'Professional-grade treadmill with advanced features and durable construction.',
       features: ['12 km/h max speed', '15 incline levels', 'Heart rate monitor', 'LCD display']
@@ -52,7 +65,7 @@ const Equipment: React.FC = () => {
       id: '2',
       name: 'Elliptical Trainer Elite',
       category: 'Cardio',
-      image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Elliptical Trainer Elite'] || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
       price: '₵12,500',
       description: 'Low-impact cardio machine perfect for full-body workouts.',
       features: ['20 resistance levels', 'Built-in programs', 'Pulse sensors', 'Compact design']
@@ -61,7 +74,7 @@ const Equipment: React.FC = () => {
       id: '3',
       name: 'Stationary Bike Pro',
       category: 'Cardio',
-      image: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Stationary Bike Pro'] || 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
       price: '₵8,500',
       description: 'Ergonomic design with smooth resistance and comfortable seating.',
       features: ['Magnetic resistance', 'Adjustable seat', 'Digital display', 'Quiet operation']
@@ -70,7 +83,7 @@ const Equipment: React.FC = () => {
       id: '4',
       name: 'Smith Machine Complete',
       category: 'Strength',
-      image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Smith Machine Complete'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
       price: '₵25,000',
       description: 'All-in-one strength training system with safety features.',
       features: ['Safety catches', 'Multiple stations', 'Olympic bar included', 'Weight storage']
@@ -79,7 +92,7 @@ const Equipment: React.FC = () => {
       id: '5',
       name: 'Cable Crossover Machine',
       category: 'Strength',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Cable Crossover Machine'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
       price: '₵18,000',
       description: 'Versatile cable system for comprehensive strength training.',
       features: ['Dual pulleys', 'Adjustable height', 'Multiple attachments', 'Smooth operation']
@@ -88,7 +101,7 @@ const Equipment: React.FC = () => {
       id: '6',
       name: 'Leg Press Machine',
       category: 'Strength',
-      image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Leg Press Machine'] || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
       price: '₵16,500',
       description: 'Heavy-duty leg press for powerful lower body workouts.',
       features: ['45° angle design', 'Weight capacity: 500kg', 'Comfortable backrest', 'Safety locks']
@@ -97,7 +110,7 @@ const Equipment: React.FC = () => {
       id: '7',
       name: 'Olympic Barbell Set',
       category: 'Free Weights',
-      image: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Olympic Barbell Set'] || 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
       price: '₵3,500',
       description: 'Professional Olympic barbell with weight plates included.',
       features: ['20kg barbell', '200kg total weight', 'Chrome finish', 'Competition grade']
@@ -106,7 +119,7 @@ const Equipment: React.FC = () => {
       id: '8',
       name: 'Adjustable Dumbbells',
       category: 'Free Weights',
-      image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Adjustable Dumbbells'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
       price: '₵4,200',
       description: 'Space-saving adjustable dumbbells with quick-change system.',
       features: ['5-50kg per dumbbell', 'Quick dial system', 'Compact storage', 'Durable construction']
@@ -115,7 +128,7 @@ const Equipment: React.FC = () => {
       id: '9',
       name: 'Kettlebell Set',
       category: 'Free Weights',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Kettlebell Set'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
       price: '₵2,800',
       description: 'Complete kettlebell set for functional training.',
       features: ['4kg to 32kg range', 'Cast iron construction', 'Smooth finish', 'Set of 6']
@@ -124,7 +137,7 @@ const Equipment: React.FC = () => {
       id: '10',
       name: 'Yoga Mat Premium',
       category: 'Accessories',
-      image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Yoga Mat Premium'] || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
       price: '₵350',
       description: 'Extra-thick non-slip yoga mat for comfort and stability.',
       features: ['10mm thickness', 'Non-slip surface', 'Eco-friendly material', 'Carrying strap']
@@ -133,7 +146,7 @@ const Equipment: React.FC = () => {
       id: '11',
       name: 'Resistance Bands Set',
       category: 'Accessories',
-      image: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Resistance Bands Set'] || 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
       price: '₵450',
       description: 'Professional resistance band set with multiple resistance levels.',
       features: ['5 resistance levels', 'Door anchor included', 'Exercise guide', 'Portable']
@@ -142,7 +155,7 @@ const Equipment: React.FC = () => {
       id: '12',
       name: 'Foam Roller Pro',
       category: 'Accessories',
-      image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
+      image: equipmentImages['Foam Roller Pro'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
       price: '₵280',
       description: 'High-density foam roller for muscle recovery and flexibility.',
       features: ['High density foam', 'Textured surface', 'Multiple sizes', 'Durable']
