@@ -23,6 +23,10 @@ import {
 import video1 from '../video/13749263_3840_2160_24fps.mp4';
 import video2 from '../video/4746006-uhd_3840_2160_25fps.mp4';
 
+// Import images from home images folder
+import cardioImage from '../home images/cardio.png';
+import strengthImage from '../home images/Strength.jpg';
+
 const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurrentPage }) => {
   return (
     <div className="flex flex-col">
@@ -244,13 +248,13 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
               { 
                 title: 'CARDIO', 
                 description: 'Get your heart pumping.',
-                image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
+                image: cardioImage,
                 scheduleLink: '#'
               },
               { 
                 title: 'STRENGTH', 
                 description: 'Build muscle. Build confidence.',
-                image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop',
+                image: strengthImage,
                 scheduleLink: '#'
               },
               { 
