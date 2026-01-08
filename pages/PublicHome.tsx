@@ -24,7 +24,11 @@ import video1 from '../video/13749263_3840_2160_24fps.mp4';
 import video2 from '../video/4746006-uhd_3840_2160_25fps.mp4';
 
 // Import images from Home images folder using import.meta.glob (handles spaces in folder name)
-const homeImageModules = import.meta.glob('../Home images/*.{png,jpg,jpeg}', { eager: true });
+// Try different path patterns to handle folder name with space
+const homeImageModules1 = import.meta.glob('../Home images/*.{png,jpg,jpeg}', { eager: true });
+const homeImageModules2 = import.meta.glob('../Home%20images/*.{png,jpg,jpeg}', { eager: true });
+const homeImageModules = { ...homeImageModules1, ...homeImageModules2 };
+
 const homeImages: Record<string, string> = {};
 
 // Map image filenames to variables
@@ -34,25 +38,23 @@ Object.entries(homeImageModules).forEach(([path, module]: [string, any]) => {
   const imageUrl = typeof module === 'string' ? module : module.default || module;
   
   // Match by filename (case-insensitive)
-  if (filenameLower === 'cardio.png' || filenameLower.includes('cardio')) {
+  if (filenameLower.includes('cardio')) {
     homeImages['cardio'] = imageUrl;
-  } else if (filenameLower === 'strength.jpg' || filenameLower.includes('strength')) {
+  } else if (filenameLower.includes('strength')) {
     homeImages['strength'] = imageUrl;
   }
 });
 
-const cardioImage = homeImages['cardio'] || '';
-const strengthImage = homeImages['strength'] || '';
-
 // Debug: Log what we found
-if (Object.keys(homeImageModules).length > 0) {
-  console.log('Found home images:', Object.keys(homeImageModules));
-  console.log('Mapped images:', homeImages);
-  console.log('Cardio image URL:', cardioImage);
-  console.log('Strength image URL:', strengthImage);
-} else {
-  console.warn('No images found in Home images folder! Check the path.');
-}
+console.log('Home image modules found:', Object.keys(homeImageModules));
+console.log('Mapped home images:', homeImages);
+
+// Use local images if found, otherwise fallback to Unsplash
+const cardioImage = homeImages['cardio'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop';
+const strengthImage = homeImages['strength'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop';
+
+console.log('Final cardio image:', cardioImage);
+console.log('Final strength image:', strengthImage);
 
 const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurrentPage }) => {
   return (
