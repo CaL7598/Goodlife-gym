@@ -23,9 +23,23 @@ import {
 import video1 from '../video/13749263_3840_2160_24fps.mp4';
 import video2 from '../video/4746006-uhd_3840_2160_25fps.mp4';
 
-// Import images from Home images folder
-import cardioImage from '../Home images/cardio.png';
-import strengthImage from '../Home images/Strength.jpg';
+// Import images from Home images folder using import.meta.glob (handles spaces in folder name)
+const homeImageModules = import.meta.glob('../Home images/*.{png,jpg,jpeg}', { eager: true });
+const homeImages: Record<string, string> = {};
+
+// Map image filenames to variables
+Object.entries(homeImageModules).forEach(([path, module]: [string, any]) => {
+  const filename = path.split('/').pop()?.toLowerCase() || '';
+  const imageUrl = typeof module === 'string' ? module : module.default || module;
+  if (filename.includes('cardio')) {
+    homeImages['cardio'] = imageUrl;
+  } else if (filename.includes('strength')) {
+    homeImages['strength'] = imageUrl;
+  }
+});
+
+const cardioImage = homeImages['cardio'] || '';
+const strengthImage = homeImages['strength'] || '';
 
 const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurrentPage }) => {
   return (
