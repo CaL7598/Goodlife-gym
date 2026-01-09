@@ -330,6 +330,9 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     }
 
     try {
+      // Get staff name for confirmedBy field
+      const confirmedByName = getConfirmedByName();
+      
       // Create payment object without ID - database will generate UUID
       const paymentData: Omit<PaymentRecord, 'id'> = {
         memberId: member.id,
@@ -341,7 +344,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
         })(),
         method: newPay.method as PaymentMethod,
         status: newPay.method === PaymentMethod.CASH ? PaymentStatus.CONFIRMED : PaymentStatus.PENDING,
-        confirmedBy: newPay.method === PaymentMethod.CASH ? 'Staff' : undefined,
+        confirmedBy: newPay.method === PaymentMethod.CASH ? confirmedByName : undefined,
         // Include mobile money details if method is Mobile Money
         ...(newPay.method === PaymentMethod.MOMO && {
           transactionId: momoDetails.transactionId || undefined,
