@@ -34,7 +34,6 @@ interface Equipment {
   name: string;
   category: string;
   image: string;
-  price?: string;
   description: string;
   features: string[];
 }
@@ -57,7 +56,6 @@ const Equipment: React.FC = () => {
       name: 'Treadmill Pro 3000',
       category: 'Cardio',
       image: equipmentImages['Treadmill Pro 3000'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
-      price: '₵15,000',
       description: 'Professional-grade treadmill with advanced features and durable construction.',
       features: ['12 km/h max speed', '15 incline levels', 'Heart rate monitor', 'LCD display']
     },
@@ -66,7 +64,6 @@ const Equipment: React.FC = () => {
       name: 'Elliptical Trainer Elite',
       category: 'Cardio',
       image: equipmentImages['Elliptical Trainer Elite'] || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
-      price: '₵12,500',
       description: 'Low-impact cardio machine perfect for full-body workouts.',
       features: ['20 resistance levels', 'Built-in programs', 'Pulse sensors', 'Compact design']
     },
@@ -75,7 +72,6 @@ const Equipment: React.FC = () => {
       name: 'Stationary Bike Pro',
       category: 'Cardio',
       image: equipmentImages['Stationary Bike Pro'] || 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
-      price: '₵8,500',
       description: 'Ergonomic design with smooth resistance and comfortable seating.',
       features: ['Magnetic resistance', 'Adjustable seat', 'Digital display', 'Quiet operation']
     },
@@ -84,7 +80,6 @@ const Equipment: React.FC = () => {
       name: 'Smith Machine Complete',
       category: 'Strength',
       image: equipmentImages['Smith Machine Complete'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
-      price: '₵25,000',
       description: 'All-in-one strength training system with safety features.',
       features: ['Safety catches', 'Multiple stations', 'Olympic bar included', 'Weight storage']
     },
@@ -93,7 +88,6 @@ const Equipment: React.FC = () => {
       name: 'Cable Crossover Machine',
       category: 'Strength',
       image: equipmentImages['Cable Crossover Machine'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
-      price: '₵18,000',
       description: 'Versatile cable system for comprehensive strength training.',
       features: ['Dual pulleys', 'Adjustable height', 'Multiple attachments', 'Smooth operation']
     },
@@ -102,7 +96,6 @@ const Equipment: React.FC = () => {
       name: 'Leg Press Machine',
       category: 'Strength',
       image: equipmentImages['Leg Press Machine'] || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
-      price: '₵16,500',
       description: 'Heavy-duty leg press for powerful lower body workouts.',
       features: ['45° angle design', 'Weight capacity: 500kg', 'Comfortable backrest', 'Safety locks']
     },
@@ -111,7 +104,6 @@ const Equipment: React.FC = () => {
       name: 'Olympic Barbell Set',
       category: 'Free Weights',
       image: equipmentImages['Olympic Barbell Set'] || 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
-      price: '₵3,500',
       description: 'Professional Olympic barbell with weight plates included.',
       features: ['20kg barbell', '200kg total weight', 'Chrome finish', 'Competition grade']
     },
@@ -120,7 +112,6 @@ const Equipment: React.FC = () => {
       name: 'Adjustable Dumbbells',
       category: 'Free Weights',
       image: equipmentImages['Adjustable Dumbbells'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
-      price: '₵4,200',
       description: 'Space-saving adjustable dumbbells with quick-change system.',
       features: ['5-50kg per dumbbell', 'Quick dial system', 'Compact storage', 'Durable construction']
     },
@@ -129,7 +120,6 @@ const Equipment: React.FC = () => {
       name: 'Kettlebell Set',
       category: 'Free Weights',
       image: equipmentImages['Kettlebell Set'] || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80',
-      price: '₵2,800',
       description: 'Complete kettlebell set for functional training.',
       features: ['4kg to 32kg range', 'Cast iron construction', 'Smooth finish', 'Set of 6']
     },
@@ -138,7 +128,6 @@ const Equipment: React.FC = () => {
       name: 'Yoga Mat Premium',
       category: 'Accessories',
       image: equipmentImages['Yoga Mat Premium'] || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop&q=80',
-      price: '₵350',
       description: 'Extra-thick non-slip yoga mat for comfort and stability.',
       features: ['10mm thickness', 'Non-slip surface', 'Eco-friendly material', 'Carrying strap']
     },
@@ -147,7 +136,6 @@ const Equipment: React.FC = () => {
       name: 'Resistance Bands Set',
       category: 'Accessories',
       image: equipmentImages['Resistance Bands Set'] || 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&h=600&fit=crop&q=80',
-      price: '₵450',
       description: 'Professional resistance band set with multiple resistance levels.',
       features: ['5 resistance levels', 'Door anchor included', 'Exercise guide', 'Portable']
     },
@@ -156,7 +144,6 @@ const Equipment: React.FC = () => {
       name: 'Foam Roller Pro',
       category: 'Accessories',
       image: equipmentImages['Foam Roller Pro'] || 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=600&fit=crop&q=80',
-      price: '₵280',
       description: 'High-density foam roller for muscle recovery and flexibility.',
       features: ['High density foam', 'Textured surface', 'Multiple sizes', 'Durable']
     }
@@ -281,9 +268,6 @@ const Equipment: React.FC = () => {
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-slate-900 mb-2">{item.name}</h3>
-                  {item.price && (
-                    <p className="text-2xl font-extrabold text-rose-600 mb-3">{item.price}</p>
-                  )}
                   <p className="text-slate-600 mb-4 leading-relaxed">{item.description}</p>
                   <ul className="space-y-2 mb-6">
                     {item.features.map((feature, idx) => (

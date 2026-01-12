@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StaffMember, UserRole } from '../types';
-import { Search, Plus, Trash2, UserPlus, User, Mail, Phone, Briefcase, Shield, X, AlertCircle } from 'lucide-react';
+import { Search, Plus, Trash2, UserPlus, User, Mail, Phone, Briefcase, Shield, X, AlertCircle, Edit2, Save } from 'lucide-react';
 import { staffService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -16,6 +16,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
   const { showSuccess, showError } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember & { password?: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     staffMember: StaffMember | null;
@@ -135,6 +137,74 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
     } catch (error: any) {
       console.error('Error creating staff:', error);
       showError(error.message || 'Failed to create staff member. Please try again.');
+    }
+  };
+
+  const handleEditStaff = (staffMember: StaffMember) => {
+    setEditingStaff({ ...staffMember, password: '' });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+
+    // Validation
+    if (!editingStaff.fullName || !editingStaff.email || !editingStaff.phone || !editingStaff.position) {
+      showError('Please fill in all required fields');
+      return;
+    }
+
+    // Check if email already exists (excluding current staff member)
+    const emailExists = staff.some(s => 
+      s.id !== editingStaff.id && s.email.toLowerCase() === editingStaff.email?.toLowerCase()
+    );
+    if (emailExists) {
+      showError('A staff member with this email already exists');
+      return;
+    }
+
+    // Validate password if provided
+    if (editingStaff.password && editingStaff.password.length < 6) {
+      showError('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseKey) {
+        // Prepare update data
+        const updateData: Partial<StaffMember> & { password?: string } = {
+          fullName: editingStaff.fullName,
+          email: editingStaff.email,
+          phone: editingStaff.phone,
+          position: editingStaff.position,
+          role: editingStaff.role
+        };
+
+        // Only include password if it was changed
+        if (editingStaff.password && editingStaff.password.length > 0) {
+          updateData.password = editingStaff.password;
+        }
+
+        const updatedStaff = await staffService.update(editingStaff.id, updateData);
+        console.log('✅ Staff updated in Supabase:', updatedStaff.id);
+
+        // Update local state
+        setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+        logActivity('Update Staff', `Updated staff account for ${updatedStaff.fullName} (${updatedStaff.email})`, 'admin');
+        
+        showSuccess(`Staff member ${updatedStaff.fullName} updated successfully`);
+        setShowEditModal(false);
+        setEditingStaff(null);
+      } else {
+        showError('Database not configured. Cannot update staff member.');
+      }
+    } catch (error: any) {
+      console.error('Error updating staff:', error);
+      showError(error.message || 'Failed to update staff member. Please try again.');
     }
   };
 
@@ -267,13 +337,22 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleDeleteStaff(staffMember)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete staff member"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditStaff(staffMember)}
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Edit staff member"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStaff(staffMember)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete staff member"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -384,6 +463,119 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
                   className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium transition-colors"
                 >
                   Add Staff Member
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Staff Modal */}
+      {showEditModal && editingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Edit Staff Member</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingStaff(null);
+                }}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateStaff} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={editingStaff.fullName}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={editingStaff.email}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone *</label>
+                <input
+                  type="tel"
+                  value={editingStaff.phone}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Position *</label>
+                <input
+                  type="text"
+                  value={editingStaff.position}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, position: e.target.value })}
+                  placeholder="e.g., Front Desk Officer, Trainer, Manager"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Role *</label>
+                <select
+                  value={editingStaff.role}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, role: e.target.value as UserRole })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                >
+                  <option value={UserRole.STAFF}>Staff</option>
+                  <option value={UserRole.SUPER_ADMIN}>Super Admin</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={editingStaff.password || ''}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  placeholder="Leave blank to keep current password"
+                  minLength={6}
+                />
+                <p className="text-xs text-slate-500 mt-1">Leave blank to keep current password. Minimum 6 characters if changing.</p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingStaff(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save size={18} />
+                  Save Changes
                 </button>
               </div>
             </form>
