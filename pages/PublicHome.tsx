@@ -103,7 +103,7 @@ const PublicHome: React.FC<{ setCurrentPage: (p: string) => void }> = ({ setCurr
                 animation: 'fadeInUp 0.8s ease-out 0.2s both'
               }}
             >
-              Goodlife Fitness
+              Goodlife Fitness Ghana
             </span>
             
             {/* Animated Headline */}

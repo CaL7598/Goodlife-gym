@@ -29,7 +29,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer" onClick={() => setCurrentPage('home')}>
               <Dumbbell className="text-rose-600 h-6 w-6 sm:h-8 sm:w-8" />
-              <span className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">GOODLIFE <span className="text-rose-600">FITNESS</span></span>
+              <span className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">Goodlife <span className="text-rose-600">Fitness Ghana</span></span>
             </div>
 
             {/* Desktop Nav */}
@@ -103,7 +103,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Dumbbell className="text-rose-500 h-6 w-6" />
-                <span className="text-lg font-bold text-white">GOODLIFE FITNESS</span>
+                <span className="text-lg font-bold text-white">Goodlife Fitness Ghana</span>
               </div>
               <p className="text-sm max-w-sm leading-relaxed">
                 Empowering your journey to a healthier, stronger life. Join our community and experience world-class facilities and expert coaching.
