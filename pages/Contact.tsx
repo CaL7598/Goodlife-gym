@@ -99,15 +99,15 @@ const Contact: React.FC = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Mondays</span>
-                    <span className="font-bold">6:00 AM</span>
+                    <span className="font-bold">6:00 PM</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Wednesdays</span>
-                    <span className="font-bold">6:00 AM</span>
+                    <span className="font-bold">6:00 PM</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Saturdays</span>
-                    <span className="font-bold">6:00 AM</span>
+                    <span className="font-bold">6:00 PM</span>
                   </div>
                 </div>
               </div>
