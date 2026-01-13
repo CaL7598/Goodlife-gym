@@ -128,10 +128,46 @@ If the above doesn't work, you can create a separate `package.json` for backend:
 
 ## Still Having Issues?
 
-1. **Check Render logs** for specific error messages
-2. **Verify environment variables** are set correctly
-3. **Make sure PORT is 10000** (Render's default)
-4. **Check that server.js exists** in your repository root
+### Getting "Not Found" Error?
+
+If you see "Not Found" when visiting `/api/health`:
+
+1. **Check Render Logs:**
+   - Go to your service → **"Logs"** tab
+   - Look for: `🚀 Email API server running`
+   - If you DON'T see this, the server isn't starting
+   - Look for error messages (red text)
+
+2. **Common Issues:**
+
+   **Server not starting:**
+   - Check if you see any errors in logs
+   - Verify `node server.js` command is correct
+   - Make sure `server.js` file exists in root directory
+
+   **Wrong URL:**
+   - Make sure you're using: `https://your-actual-service-name.onrender.com/api/health`
+   - Replace `your-actual-service-name` with your actual Render service name
+   - Check the service URL in Render dashboard (top of the page)
+
+   **Server crashed:**
+   - Check logs for crash errors
+   - Common causes: Missing environment variables, wrong PORT, module errors
+
+3. **Test Other Endpoints:**
+   - Try: `https://your-service.onrender.com/api/email-config`
+   - This should also work if server is running
+
+4. **Verify Environment Variables:**
+   - Go to Render → Your service → **Environment** tab
+   - Make sure `PORT=10000` is set
+   - Make sure `RESEND_API_KEY` is set
+   - Make sure `RESEND_FROM_EMAIL` is set
+
+5. **Manual Check:**
+   - In Render logs, you should see the server start message
+   - If you see errors about missing modules, the build didn't complete
+   - If you see "Cannot find module", dependencies weren't installed
 
 ## Quick Checklist
 
