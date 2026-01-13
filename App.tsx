@@ -12,7 +12,8 @@ import {
   PaymentStatus,
   ActivityLog,
   AttendanceRecord,
-  ClientCheckIn
+  ClientCheckIn,
+  MaintenanceLog
 } from './types';
 import { 
   INITIAL_MEMBERS, 
@@ -30,7 +31,8 @@ import {
   activityLogsService,
   attendanceService,
   clientCheckInService,
-  equipmentService
+  equipmentService,
+  maintenanceLogsService
 } from './lib/database';
 import { supabase } from './lib/supabase';
 
@@ -62,6 +64,7 @@ import StaffManager from './pages/StaffManager';
 import EquipmentManager from './pages/EquipmentManager';
 import CheckIn from './pages/CheckIn';
 import CheckInManager from './pages/CheckInManager';
+import MaintenanceLogbook from './pages/MaintenanceLogbook';
 
 const App: React.FC = () => {
   // Initialize state from localStorage if available
@@ -86,6 +89,7 @@ const App: React.FC = () => {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [clientCheckIns, setClientCheckIns] = useState<ClientCheckIn[]>([]);
+  const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
   
   // Update notification system
   const [lastCheckedTimestamp, setLastCheckedTimestamp] = useState<string | null>(
@@ -197,7 +201,7 @@ const App: React.FC = () => {
         }
 
         // Load all data from Supabase
-        const [membersData, staffData, paymentsData, announcementsData, galleryData, logsData, attendanceData, checkInsData] = await Promise.all([
+        const [membersData, staffData, paymentsData, announcementsData, galleryData, logsData, attendanceData, checkInsData, maintenanceLogsData] = await Promise.all([
           membersService.getAll().catch(() => []),
           staffService.getAll().catch(() => []),
           paymentsService.getAll().catch(() => []),
@@ -205,7 +209,8 @@ const App: React.FC = () => {
           galleryService.getAll().catch(() => []),
           activityLogsService.getAll().catch(() => []),
           attendanceService.getAll().catch(() => []),
-          clientCheckInService.getAll().catch(() => [])
+          clientCheckInService.getAll().catch(() => []),
+          maintenanceLogsService.getAll().catch(() => [])
         ]);
 
         console.log('📊 Data loaded from Supabase:', {
@@ -216,7 +221,8 @@ const App: React.FC = () => {
           gallery: galleryData.length,
           logs: logsData.length,
           attendance: attendanceData.length,
-          checkIns: checkInsData.length
+          checkIns: checkInsData.length,
+          maintenanceLogs: maintenanceLogsData.length
         });
 
         // Always set data, even if empty, to ensure state is synced with database
@@ -228,6 +234,7 @@ const App: React.FC = () => {
         setActivityLogs(logsData);
         setAttendanceRecords(attendanceData);
         setClientCheckIns(checkInsData);
+        setMaintenanceLogs(maintenanceLogsData);
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
         // Fall back to local state if Supabase fails
@@ -447,6 +454,12 @@ const App: React.FC = () => {
         />;
         case 'equipment-manager': return <EquipmentManager 
           role={userRole}
+          logActivity={logActivity}
+        />;
+        case 'maintenance-logbook': return <MaintenanceLogbook 
+          role={userRole}
+          userEmail={userEmail}
+          staff={staff}
           logActivity={logActivity}
         />;
         case 'staff': return <StaffManager 

@@ -9,6 +9,7 @@ import {
   AttendanceRecord,
   ClientCheckIn,
   GymEquipment,
+  MaintenanceLog,
   SubscriptionPlan,
   PaymentMethod,
   PaymentStatus,
@@ -1045,5 +1046,71 @@ function mapEquipmentToDB(equipment: Partial<GymEquipment>): any {
   if (equipment.name !== undefined) db.name = equipment.name;
   if (equipment.state !== undefined) db.state = equipment.state;
   if (equipment.condition !== undefined) db.condition = equipment.condition;
+  return db;
+}
+
+// Maintenance Logs
+export const maintenanceLogsService = {
+  async getAll(): Promise<MaintenanceLog[]> {
+    const { data, error } = await requireSupabase()
+      .from('maintenance_logs')
+      .select('*')
+      .order('date_time', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching maintenance logs:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapMaintenanceLogFromDB);
+  },
+
+  async create(log: Omit<MaintenanceLog, 'id'>): Promise<MaintenanceLog> {
+    const { data, error } = await requireSupabase()
+      .from('maintenance_logs')
+      .insert(mapMaintenanceLogToDB(log))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating maintenance log:', error);
+      throw error;
+    }
+    
+    return mapMaintenanceLogFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('maintenance_logs')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting maintenance log:', error);
+      throw error;
+    }
+  }
+};
+
+function mapMaintenanceLogFromDB(db: any): MaintenanceLog {
+  return {
+    id: db.id,
+    equipmentName: db.equipment_name,
+    description: db.description,
+    dateTime: db.date_time,
+    staffName: db.staff_name,
+    staffEmail: db.staff_email,
+    created_at: db.created_at
+  };
+}
+
+function mapMaintenanceLogToDB(log: Partial<MaintenanceLog>): any {
+  const db: any = {};
+  if (log.equipmentName !== undefined) db.equipment_name = log.equipmentName;
+  if (log.description !== undefined) db.description = log.description;
+  if (log.dateTime !== undefined) db.date_time = log.dateTime;
+  if (log.staffName !== undefined) db.staff_name = log.staffName;
+  if (log.staffEmail !== undefined) db.staff_email = log.staffEmail;
   return db;
 }

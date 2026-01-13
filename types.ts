@@ -160,6 +160,16 @@ export interface GymEquipment {
   updated_at?: string;
 }
 
+export interface MaintenanceLog {
+  id: string;
+  equipmentName: string;
+  description: string;
+  dateTime: string; // ISO date-time string
+  staffName: string; // Name of staff who recorded the log
+  staffEmail?: string; // Email of staff who recorded the log
+  created_at?: string;
+}
+
 export interface AppState {
   userRole: UserRole;
   members: Member[];
