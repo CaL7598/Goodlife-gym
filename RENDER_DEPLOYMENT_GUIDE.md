@@ -36,9 +36,13 @@ Fill in the following settings:
 - **Branch**: `main` (should be selected by default)
 - **Root Directory**: Leave empty (or `./` if required)
 - **Runtime**: `Node`
-- **Build Command**: `npm install`
-- **Start Command**: `npm start`
+- **Build Command**: `npm install --production` (IMPORTANT: Use --production to skip dev dependencies like Vite)
+- **Start Command**: `node server.js` (IMPORTANT: Use this instead of `npm start` to avoid building frontend)
 - **Plan**: **Free** (or choose a paid plan for better performance)
+
+**⚠️ CRITICAL:** Make sure to use:
+- Build Command: `npm install --production` (this skips frontend build tools)
+- Start Command: `node server.js` (this runs only the backend server)
 
 ### Advanced Settings (Optional):
 - **Auto-Deploy**: `Yes` (automatically deploys when you push to GitHub)
@@ -141,7 +145,11 @@ Now you need to tell your frontend where to find the backend:
 - **Common issues**:
   - Missing environment variables
   - Wrong `PORT` value (should be `10000` for Render)
-  - Build errors (check if `npm install` completed)
+  - Build errors (check if `npm install --production` completed)
+  - **Frontend build errors**: If you see Vite/TypeScript errors, make sure:
+    - Build Command is: `npm install --production`
+    - Start Command is: `node server.js` (NOT `npm start`)
+    - This prevents Render from trying to build the frontend
 
 ### Backend URL not working?
 
