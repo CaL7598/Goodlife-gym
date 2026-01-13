@@ -1081,12 +1081,28 @@ export const maintenanceLogsService = {
     return mapMaintenanceLogFromDB(data);
   },
 
+  async update(id: string, updates: Partial<MaintenanceLog>): Promise<MaintenanceLog> {
+    const { data, error } = await requireSupabase()
+      .from('maintenance_logs')
+      .update(mapMaintenanceLogToDB(updates))
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating maintenance log:', error);
+      throw error;
+    }
+
+    return mapMaintenanceLogFromDB(data);
+  },
+
   async delete(id: string): Promise<void> {
     const { error } = await requireSupabase()
       .from('maintenance_logs')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
       console.error('Error deleting maintenance log:', error);
       throw error;

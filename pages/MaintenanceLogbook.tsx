@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MaintenanceLog, UserRole, StaffMember } from '../types';
-import { Search, Plus, Trash2, X, Save, Wrench, Calendar, Clock, User, FileText } from 'lucide-react';
+import { Search, Plus, Trash2, X, Save, Wrench, Calendar, Clock, User, FileText, Edit2 } from 'lucide-react';
 import { maintenanceLogsService, equipmentService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -18,6 +18,8 @@ const MaintenanceLogbook: React.FC<MaintenanceLogbookProps> = ({ role, userEmail
   const [equipment, setEquipment] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingLog, setEditingLog] = useState<MaintenanceLog | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     log: MaintenanceLog | null;
@@ -110,6 +112,40 @@ const MaintenanceLogbook: React.FC<MaintenanceLogbookProps> = ({ role, userEmail
     } catch (error: any) {
       console.error('Error adding maintenance log:', error);
       showError(`Failed to add maintenance log: ${error.message}`);
+    }
+  };
+
+  const handleEditLog = (log: MaintenanceLog) => {
+    setEditingLog(log);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLog) return;
+
+    if (!editingLog.equipmentName || !editingLog.description || !editingLog.dateTime || !editingLog.staffName) {
+      showError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const updatedLog = await maintenanceLogsService.update(editingLog.id, {
+        equipmentName: editingLog.equipmentName,
+        description: editingLog.description,
+        dateTime: new Date(editingLog.dateTime).toISOString(),
+        staffName: editingLog.staffName,
+        staffEmail: editingLog.staffEmail
+      });
+
+      setLogs(prev => prev.map(l => l.id === updatedLog.id ? updatedLog : l));
+      logActivity('Update Maintenance Log', `Updated maintenance log for ${updatedLog.equipmentName}`, 'admin');
+      showSuccess(`Maintenance log updated successfully!`);
+      setShowEditModal(false);
+      setEditingLog(null);
+    } catch (error: any) {
+      console.error('Error updating maintenance log:', error);
+      showError(`Failed to update maintenance log: ${error.message}`);
     }
   };
 
@@ -272,13 +308,22 @@ const MaintenanceLogbook: React.FC<MaintenanceLogbookProps> = ({ role, userEmail
                       </td>
                       <td className="px-4 py-4">
                         {role === UserRole.SUPER_ADMIN && (
-                          <button
-                            onClick={() => handleDeleteLog(log)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete maintenance log"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditLog(log)}
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Edit maintenance log"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLog(log)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete maintenance log"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -381,6 +426,107 @@ const MaintenanceLogbook: React.FC<MaintenanceLogbookProps> = ({ role, userEmail
                 >
                   <Save size={18} />
                   Save Log
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Log Modal */}
+      {showEditModal && editingLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Edit Maintenance Log</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingLog(null);
+                }}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLog} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Equipment Name *</label>
+                {equipment.length > 0 ? (
+                  <select
+                    value={editingLog.equipmentName}
+                    onChange={(e) => setEditingLog({ ...editingLog, equipmentName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select equipment...</option>
+                    {equipment.map((eq) => (
+                      <option key={eq} value={eq}>{eq}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={editingLog.equipmentName}
+                    onChange={(e) => setEditingLog({ ...editingLog, equipmentName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                    required
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description *</label>
+                <textarea
+                  value={editingLog.description}
+                  onChange={(e) => setEditingLog({ ...editingLog, description: e.target.value })}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time *</label>
+                <input
+                  type="datetime-local"
+                  value={new Date(editingLog.dateTime).toISOString().slice(0, 16)}
+                  onChange={(e) => setEditingLog({ ...editingLog, dateTime: new Date(e.target.value).toISOString() })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Recorded By *</label>
+                <input
+                  type="text"
+                  value={editingLog.staffName}
+                  onChange={(e) => setEditingLog({ ...editingLog, staffName: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">Name of the staff member who recorded this log</p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingLog(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save size={18} />
+                  Save Changes
                 </button>
               </div>
             </form>
