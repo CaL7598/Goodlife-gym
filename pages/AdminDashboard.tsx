@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { Member, PaymentRecord, UserRole, StaffMember, AttendanceRecord, ActivityLog, PaymentStatus } from '../types';
+import { Member, PaymentRecord, UserRole, StaffMember, AttendanceRecord, ActivityLog, PaymentStatus, Expense } from '../types';
 import { 
   Users, 
   CreditCard, 
@@ -37,9 +37,10 @@ interface DashboardProps {
   staff: StaffMember[];
   attendanceRecords: AttendanceRecord[];
   activityLogs: ActivityLog[];
+  expenses: Expense[];
 }
 
-const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, staff, attendanceRecords, activityLogs }) => {
+const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, staff, attendanceRecords, activityLogs, expenses }) => {
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [revenuePeriod, setRevenuePeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
@@ -53,15 +54,42 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
     const totalRevenue = payments
       .filter(p => p.status === 'Confirmed')
       .reduce((sum, p) => sum + p.amount, 0);
+    
+    // Calculate total expenses
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    
+    // Calculate expenses for different periods
+    const now = new Date();
+    const todayExpenses = expenses
+      .filter(e => {
+        const expenseDate = new Date(e.dateTime);
+        return expenseDate.toDateString() === now.toDateString();
+      })
+      .reduce((sum, e) => sum + e.amount, 0);
+    
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+    const weekExpenses = expenses
+      .filter(e => new Date(e.dateTime) >= weekAgo)
+      .reduce((sum, e) => sum + e.amount, 0);
+    
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthExpenses = expenses
+      .filter(e => new Date(e.dateTime) >= monthStart)
+      .reduce((sum, e) => sum + e.amount, 0);
 
     return {
       active: activeCount,
       expiring: expiringCount,
       expired: expiredCount,
       revenue: totalRevenue,
+      totalExpenses: totalExpenses,
+      todayExpenses: todayExpenses,
+      weekExpenses: weekExpenses,
+      monthExpenses: monthExpenses,
       total: members.length
     };
-  }, [members, payments]);
+  }, [members, payments, expenses]);
 
   const chartData = useMemo(() => [
     { name: 'Active', value: stats.active },
@@ -537,6 +565,54 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
           trend="Total base"
           bgColor="bg-rose-50"
         />
+      </div>
+
+      {/* Expenses Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
+          title="Total Expenses" 
+          value={`₵${stats.totalExpenses.toLocaleString()}`} 
+          icon={<DollarSign className="text-red-500" />} 
+          trend="All time"
+          bgColor="bg-red-50"
+        />
+        <StatCard 
+          title="Today's Expenses" 
+          value={`₵${stats.todayExpenses.toLocaleString()}`} 
+          icon={<Calendar className="text-blue-500" />} 
+          trend="Today"
+          bgColor="bg-blue-50"
+        />
+        <StatCard 
+          title="This Week Expenses" 
+          value={`₵${stats.weekExpenses.toLocaleString()}`} 
+          icon={<Clock className="text-purple-500" />} 
+          trend="Last 7 days"
+          bgColor="bg-purple-50"
+        />
+        <StatCard 
+          title="This Month Expenses" 
+          value={`₵${stats.monthExpenses.toLocaleString()}`} 
+          icon={<Calendar className="text-amber-500" />} 
+          trend="This month"
+          bgColor="bg-amber-50"
+        />
+      </div>
+
+      {/* Net Profit Card */}
+      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-xl border-2 border-emerald-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-emerald-700 text-xs font-semibold uppercase tracking-wider mb-2">Net Profit</p>
+            <p className="text-3xl font-bold text-emerald-900">₵{(stats.revenue - stats.totalExpenses).toLocaleString()}</p>
+            <p className="text-emerald-600 text-sm mt-2">
+              Revenue: ₵{stats.revenue.toLocaleString()} - Expenses: ₵{stats.totalExpenses.toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-emerald-200 p-4 rounded-xl">
+            <TrendingUp className="text-emerald-700" size={32} />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -15,7 +15,8 @@ import {
   Clock,
   LogIn,
   Dumbbell,
-  Wrench
+  Wrench,
+  DollarSign
 } from 'lucide-react';
 import { UserRole } from './types';
 
@@ -30,6 +31,7 @@ export const NAVIGATION_ITEMS = [
   { id: 'members', label: 'Members', icon: <Users size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'subscriptions', label: 'Subscriptions', icon: <Bell size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'payments', label: 'Payments', icon: <CreditCard size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
+  { id: 'expenses', label: 'Expenses', icon: <DollarSign size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'attendance', label: 'Attendance', icon: <Clock size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'checkins', label: 'Client Check-Ins', icon: <LogIn size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'communications', label: 'Comms', icon: <MessageSquare size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },

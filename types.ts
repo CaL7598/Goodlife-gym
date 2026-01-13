@@ -170,6 +170,17 @@ export interface MaintenanceLog {
   created_at?: string;
 }
 
+export interface Expense {
+  id: string;
+  itemName: string; // What was bought
+  description?: string; // Optional description
+  amount: number; // Cost of the item
+  dateTime: string; // ISO date-time string
+  staffName: string; // Name of staff who recorded the expense
+  staffEmail?: string; // Email of staff who recorded the expense
+  created_at?: string;
+}
+
 export interface AppState {
   userRole: UserRole;
   members: Member[];

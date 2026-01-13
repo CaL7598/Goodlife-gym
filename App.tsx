@@ -13,7 +13,8 @@ import {
   ActivityLog,
   AttendanceRecord,
   ClientCheckIn,
-  MaintenanceLog
+  MaintenanceLog,
+  Expense
 } from './types';
 import { 
   INITIAL_MEMBERS, 
@@ -32,7 +33,8 @@ import {
   attendanceService,
   clientCheckInService,
   equipmentService,
-  maintenanceLogsService
+  maintenanceLogsService,
+  expensesService
 } from './lib/database';
 import { supabase } from './lib/supabase';
 
@@ -65,6 +67,7 @@ import EquipmentManager from './pages/EquipmentManager';
 import CheckIn from './pages/CheckIn';
 import CheckInManager from './pages/CheckInManager';
 import MaintenanceLogbook from './pages/MaintenanceLogbook';
+import ExpensesManager from './pages/ExpensesManager';
 
 const App: React.FC = () => {
   // Initialize state from localStorage if available
@@ -90,6 +93,7 @@ const App: React.FC = () => {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [clientCheckIns, setClientCheckIns] = useState<ClientCheckIn[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   
   // Update notification system
   const [lastCheckedTimestamp, setLastCheckedTimestamp] = useState<string | null>(
@@ -201,7 +205,7 @@ const App: React.FC = () => {
         }
 
         // Load all data from Supabase
-        const [membersData, staffData, paymentsData, announcementsData, galleryData, logsData, attendanceData, checkInsData, maintenanceLogsData] = await Promise.all([
+        const [membersData, staffData, paymentsData, announcementsData, galleryData, logsData, attendanceData, checkInsData, maintenanceLogsData, expensesData] = await Promise.all([
           membersService.getAll().catch(() => []),
           staffService.getAll().catch(() => []),
           paymentsService.getAll().catch(() => []),
@@ -210,7 +214,8 @@ const App: React.FC = () => {
           activityLogsService.getAll().catch(() => []),
           attendanceService.getAll().catch(() => []),
           clientCheckInService.getAll().catch(() => []),
-          maintenanceLogsService.getAll().catch(() => [])
+          maintenanceLogsService.getAll().catch(() => []),
+          expensesService.getAll().catch(() => [])
         ]);
 
         console.log('📊 Data loaded from Supabase:', {
@@ -235,6 +240,7 @@ const App: React.FC = () => {
         setAttendanceRecords(attendanceData);
         setClientCheckIns(checkInsData);
         setMaintenanceLogs(maintenanceLogsData);
+        setExpenses(expensesData);
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
         // Fall back to local state if Supabase fails
@@ -438,10 +444,17 @@ const App: React.FC = () => {
             staff={staff}
             attendanceRecords={attendanceRecords}
             activityLogs={activityLogs}
+            expenses={expenses}
           />
         );
         case 'members': return <MemberManager members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
         case 'payments': return <PaymentProcessor payments={payments} setPayments={setPayments} members={members} setMembers={setMembers} role={userRole} userEmail={userEmail} staff={staff} logActivity={logActivity} />;
+        case 'expenses': return <ExpensesManager 
+          role={userRole}
+          userEmail={userEmail}
+          staff={staff}
+          logActivity={logActivity}
+        />;
         case 'subscriptions': return <SubscriptionTracker members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
         case 'communications': return <CommunicationCenter members={members} />;
         case 'activity-logs': return <ActivityLogs logs={activityLogs} />;
@@ -474,7 +487,7 @@ const App: React.FC = () => {
           role={userRole}
           logActivity={logActivity}
         />;
-        default: return <AdminDashboard members={members} payments={payments} role={userRole} staff={staff} attendanceRecords={attendanceRecords} activityLogs={activityLogs} />;
+        default: return <AdminDashboard members={members} payments={payments} role={userRole} staff={staff} attendanceRecords={attendanceRecords} activityLogs={activityLogs} expenses={expenses} />;
       }
     }
   };

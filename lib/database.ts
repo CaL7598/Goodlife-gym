@@ -10,6 +10,7 @@ import {
   ClientCheckIn,
   GymEquipment,
   MaintenanceLog,
+  Expense,
   SubscriptionPlan,
   PaymentMethod,
   PaymentStatus,
@@ -1112,5 +1113,89 @@ function mapMaintenanceLogToDB(log: Partial<MaintenanceLog>): any {
   if (log.dateTime !== undefined) db.date_time = log.dateTime;
   if (log.staffName !== undefined) db.staff_name = log.staffName;
   if (log.staffEmail !== undefined) db.staff_email = log.staffEmail;
+  return db;
+}
+
+// Expenses
+export const expensesService = {
+  async getAll(): Promise<Expense[]> {
+    const { data, error } = await requireSupabase()
+      .from('expenses')
+      .select('*')
+      .order('date_time', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching expenses:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapExpenseFromDB);
+  },
+
+  async create(expense: Omit<Expense, 'id'>): Promise<Expense> {
+    const { data, error } = await requireSupabase()
+      .from('expenses')
+      .insert(mapExpenseToDB(expense))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating expense:', error);
+      throw error;
+    }
+    
+    return mapExpenseFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<Expense>): Promise<Expense> {
+    const { data, error } = await requireSupabase()
+      .from('expenses')
+      .update(mapExpenseToDB(updates))
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating expense:', error);
+      throw error;
+    }
+    
+    return mapExpenseFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('expenses')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting expense:', error);
+      throw error;
+    }
+  }
+};
+
+function mapExpenseFromDB(db: any): Expense {
+  return {
+    id: db.id,
+    itemName: db.item_name,
+    description: db.description,
+    amount: parseFloat(db.amount),
+    dateTime: db.date_time,
+    staffName: db.staff_name,
+    staffEmail: db.staff_email,
+    created_at: db.created_at
+  };
+}
+
+function mapExpenseToDB(expense: Partial<Expense>): any {
+  const db: any = {};
+  if (expense.itemName !== undefined) db.item_name = expense.itemName;
+  if (expense.description !== undefined) db.description = expense.description;
+  if (expense.amount !== undefined) db.amount = expense.amount;
+  if (expense.dateTime !== undefined) db.date_time = expense.dateTime;
+  if (expense.staffName !== undefined) db.staff_name = expense.staffName;
+  if (expense.staffEmail !== undefined) db.staff_email = expense.staffEmail;
   return db;
 }
