@@ -387,21 +387,23 @@ const ExpensesManager: React.FC<ExpensesManagerProps> = ({ role, userEmail, staf
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditExpense(expense)}
-                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Edit expense"
-                          >
-                            <Edit2 size={18} />
-                          </button>
                           {role === UserRole.SUPER_ADMIN && (
-                            <button
-                              onClick={() => handleDeleteExpense(expense)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete expense"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleEditExpense(expense)}
+                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                title="Edit expense"
+                              >
+                                <Edit2 size={18} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExpense(expense)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete expense"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
