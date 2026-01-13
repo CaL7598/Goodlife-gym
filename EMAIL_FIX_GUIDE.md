@@ -56,7 +56,27 @@ You need to deploy the backend server (`server.js`) to a hosting platform. Here 
 
 After deploying the backend, you need to set `VITE_API_URL` in your frontend hosting platform:
 
-#### If using GitHub Pages / Vercel / Netlify:
+#### If using GitHub Pages:
+
+**GitHub Pages uses GitHub Actions to build your site. You need to add `VITE_API_URL` as a GitHub Secret:**
+
+1. Go to your GitHub repository: `https://github.com/YOUR_USERNAME/Goodlife-Fitness-Gym`
+2. Click **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Name: `VITE_API_URL`
+5. Value: `https://your-backend-url.railway.app` (replace with your actual backend URL)
+6. Click **Add secret**
+
+**The GitHub Actions workflow will automatically use this secret when building.**
+
+7. **Trigger a new deployment:**
+   - Go to **Actions** tab in your repository
+   - Click **"Deploy to GitHub Pages"** workflow
+   - Click **"Run workflow"** → **"Run workflow"** (or just push a commit to main branch)
+
+**Note:** The workflow file (`.github/workflows/deploy.yml`) has already been updated to include `VITE_API_URL` in the build process.
+
+#### If using Vercel / Netlify:
 
 1. Go to your hosting platform's dashboard
 2. Find "Environment Variables" or "Settings" → "Environment Variables"
@@ -121,7 +141,9 @@ After deploying the backend, you need to set `VITE_API_URL` in your frontend hos
 ### Common Errors
 
 **Error: "Email service not configured: VITE_API_URL not set"**
-- **Fix**: Add `VITE_API_URL` environment variable to your frontend hosting platform
+- **For GitHub Pages**: Add `VITE_API_URL` as a GitHub Secret (Settings → Secrets → Actions)
+- **For other platforms**: Add `VITE_API_URL` as an environment variable in your hosting platform
+- **Important**: After adding the secret/variable, you must rebuild/redeploy your site
 
 **Error: "Failed to fetch" or CORS errors**
 - **Fix**: Verify backend URL is correct and backend is running
