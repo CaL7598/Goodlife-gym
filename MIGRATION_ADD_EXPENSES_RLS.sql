@@ -1,8 +1,16 @@
 -- Migration: Add Row Level Security policies for expenses table
 -- Run this in your Supabase SQL Editor after running MIGRATION_ADD_EXPENSES_TABLE.sql
+-- This script is idempotent - safe to run multiple times
 
 -- Enable RLS
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (to allow re-running this migration)
+DROP POLICY IF EXISTS "Allow authenticated users to view expenses" ON expenses;
+DROP POLICY IF EXISTS "Allow authenticated users to insert expenses" ON expenses;
+DROP POLICY IF EXISTS "Allow authenticated users to update expenses" ON expenses;
+DROP POLICY IF EXISTS "Allow authenticated users to delete expenses" ON expenses;
+DROP POLICY IF EXISTS "Allow service_role full access to expenses" ON expenses;
 
 -- Policy: Allow authenticated users to view all expenses
 CREATE POLICY "Allow authenticated users to view expenses" 
