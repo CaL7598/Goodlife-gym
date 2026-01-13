@@ -230,7 +230,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
                       <td style="background-color: #111827; color: #9ca3af; padding: 30px; text-align: center; font-size: 13px;">
                         <p style="color: #ffffff; font-size: 16px; font-weight: bold; margin: 0 0 15px 0;">GOODLIFE FITNESS</p>
                         <p style="margin: 15px 0;">
-                          <a href="#" style="color: #dc2626; text-decoration: none; margin: 0 10px;">Visit Our Website</a> | 
+                          <a href="https://www.goodlifefitnessghana.com/" style="color: #dc2626; text-decoration: none; margin: 0 10px;">Visit Our Website</a> | 
                           <a href="mailto:goodlifeghana13@gmail.com" style="color: #dc2626; text-decoration: none; margin: 0 10px;">Email Us</a> | 
                           <a href="tel:+233551336976" style="color: #dc2626; text-decoration: none; margin: 0 10px;">0551336976</a>
                         </p>
@@ -419,7 +419,7 @@ app.post('/api/send-payment-email', async (req, res) => {
               <div class="footer">
                 <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 15px;">GOODLIFE FITNESS</div>
                 <div class="footer-links">
-                  <a href="#">Visit Our Website</a> | 
+                  <a href="https://www.goodlifefitnessghana.com/">Visit Our Website</a> | 
                   <a href="mailto:hello@goodlifefitness.com">Email Us</a> | 
                   <a href="tel:+233551336976">0551336976</a>
                 </div>
@@ -574,7 +574,7 @@ app.post('/api/send-message-email', async (req, res) => {
               <div class="footer">
                 <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 15px;">GOODLIFE FITNESS</div>
                 <div class="footer-links">
-                  <a href="#">Visit Our Website</a> | 
+                  <a href="https://www.goodlifefitnessghana.com/">Visit Our Website</a> | 
                   <a href="mailto:hello@goodlifefitness.com">Email Us</a> | 
                   <a href="tel:+233551336976">0551336976</a>
                 </div>
