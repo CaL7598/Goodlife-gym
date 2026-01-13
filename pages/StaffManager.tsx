@@ -18,6 +18,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember & { password?: string; currentPassword?: string } | null>(null);
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     staffMember: StaffMember | null;

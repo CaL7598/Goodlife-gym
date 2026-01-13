@@ -37,6 +37,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   currentPage, 
   role,
   staff,
+  setStaff,
   userEmail,
   onLogout,
   isOnShift,
