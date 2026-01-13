@@ -38,6 +38,14 @@ You need to deploy the backend server (`server.js`) to a hosting platform. Here 
 6. Railway will auto-deploy
 7. Copy the generated URL (e.g., `https://your-app.up.railway.app`)
 
+**Using Your GoDaddy Domain (Optional):**
+- After deployment, you can use your GoDaddy domain instead of Railway's URL
+- In Railway: Go to your project → Settings → Networking → Add Custom Domain
+- Enter: `api.goodlifefitnessghana.de` (or `backend.goodlifefitnessghana.de`)
+- Railway will provide DNS records to add in GoDaddy
+- In GoDaddy DNS: Add a CNAME record pointing to Railway's domain
+- Then use `https://api.goodlifefitnessghana.de` as your `VITE_API_URL`
+
 #### Option B: Render (Free Tier Available)
 
 1. Go to https://render.com
@@ -157,12 +165,36 @@ After deploying the backend, you need to set `VITE_API_URL` in your frontend hos
 - Make sure `RESEND_FROM_EMAIL` uses your verified domain
 - Ensure "Enable Sending" is ON in Resend dashboard
 
+## Using Your GoDaddy Domain
+
+**Important:** Buying a domain from GoDaddy doesn't mean you can host Node.js servers there. GoDaddy's basic hosting is for PHP/static sites, not Node.js.
+
+### Recommended Approach: Use Railway/Render + GoDaddy Domain
+
+1. **Deploy backend on Railway/Render** (free tier available)
+2. **Point your GoDaddy domain to it:**
+   - Create a subdomain like `api.goodlifefitnessghana.de` or `backend.goodlifefitnessghana.de`
+   - In Railway/Render: Add custom domain
+   - In GoDaddy DNS: Add CNAME record pointing to Railway/Render's domain
+   - Use your custom domain as `VITE_API_URL`
+
+### Alternative: GoDaddy VPS (Advanced)
+
+If you want to use GoDaddy hosting:
+- Purchase GoDaddy VPS (Virtual Private Server) - starts around $5-10/month
+- Requires server management (SSH, Node.js installation, PM2, etc.)
+- More complex setup and maintenance
+- **Not recommended** unless you're comfortable with server administration
+
+**Recommendation:** Use Railway/Render (free) + point your GoDaddy domain to it. This is the easiest and most reliable option.
+
 ## Important Notes
 
 - The backend server must be running 24/7 for emails to work
 - Free tiers on Railway/Render may spin down after inactivity (emails may be delayed)
 - Consider upgrading to a paid plan for production use
 - Always test email functionality after deployment
+- You can use your GoDaddy domain with any hosting provider via DNS settings
 
 ## Need Help?
 
