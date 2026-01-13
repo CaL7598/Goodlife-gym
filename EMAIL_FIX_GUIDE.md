@@ -60,6 +60,16 @@ You need to deploy the backend server (`server.js`) to a hosting platform. Here 
 6. Add environment variables (same as Railway above)
 7. Deploy and copy the URL
 
+**See `RENDER_DEPLOYMENT_GUIDE.md` for detailed step-by-step instructions.**
+
+#### Option C: Hostinger VPS (If You Have VPS/Cloud Plan)
+
+If you have Hostinger VPS or Cloud hosting, you can host the backend there. However, this requires server management knowledge.
+
+**See `HOSTINGER_BACKEND_GUIDE.md` for detailed instructions.**
+
+**Note:** Hostinger shared hosting cannot run Node.js servers. Only VPS/Cloud plans support Node.js.
+
 ### Step 2: Update Frontend Environment Variables
 
 After deploying the backend, you need to set `VITE_API_URL` in your frontend hosting platform:
