@@ -33,7 +33,7 @@ You need to deploy the backend server (`server.js`) to a hosting platform. Here 
   PORT=3001
   NODE_ENV=production
   ```
-  (Add Twilio variables if you use SMS)
+  (Add Arkesel variables if you use SMS: ARKESEL_SENDER_ID and ARKESEL_API_KEY)
 
 6. Railway will auto-deploy
 7. Copy the generated URL (e.g., `https://your-app.up.railway.app`)

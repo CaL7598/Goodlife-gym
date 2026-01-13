@@ -89,9 +89,8 @@ Make sure to set these in your hosting platform:
 |----------|-------------|---------|
 | `RESEND_API_KEY` | Your Resend API key | `re_xxxxxxxxxxxxx` |
 | `RESEND_FROM_EMAIL` | Email address to send from | `Goodlife Fitness <goodlifeghana13@gmail.com>` |
-| `TWILIO_ACCOUNT_SID` | Twilio Account SID | `ACxxxxxxxxxxxxx` |
-| `TWILIO_AUTH_TOKEN` | Twilio Auth Token | `your_auth_token` |
-| `TWILIO_PHONE_NUMBER` | Twilio phone number | `+1234567890` |
+| `ARKESEL_SENDER_ID` | Arkesel Sender ID | `Goodlife Fitness` |
+| `ARKESEL_API_KEY` | Arkesel API Key | `your_arkesel_api_key` |
 | `PORT` | Server port (auto-set by platform) | `3001` or `10000` |
 | `NODE_ENV` | Environment | `production` |
 

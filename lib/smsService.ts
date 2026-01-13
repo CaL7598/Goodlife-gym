@@ -1,7 +1,7 @@
 /**
- * SMS Service using Twilio API via Backend Proxy
+ * SMS Service using Arkesel API via Backend Proxy
  * 
- * This service calls our backend API server which handles Twilio API calls
+ * This service calls our backend API server which handles Arkesel API calls
  * to avoid CORS issues and keep the API credentials secure on the server-side.
  * 
  * In development, Vite proxy forwards /api/* requests to the backend server.

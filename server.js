@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Resend } from 'resend';
-import twilio from 'twilio';
+import Arkesel from 'arkesel-js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -26,11 +26,10 @@ const fromEmailRaw = process.env.RESEND_FROM_EMAIL || process.env.VITE_RESEND_FR
 // Format: if it doesn't have < >, add display name
 const RESEND_FROM_EMAIL = fromEmailRaw.includes('<') ? fromEmailRaw : `Goodlife Fitness <${fromEmailRaw}>`;
 
-// Initialize Twilio
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
-const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
+// Initialize Arkesel SMS
+const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKESEL_SENDER_ID;
+const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY;
+const arkeselClient = ARKESEL_SENDER_ID && ARKESEL_API_KEY ? new Arkesel(ARKESEL_SENDER_ID, ARKESEL_API_KEY) : null;
 
 // Helper function to format phone number (add country code if missing)
 function formatPhoneNumber(phone) {
@@ -699,30 +698,28 @@ app.post('/api/send-welcome-sms', async (req, res) => {
     }
 
     // Re-check environment variables in case they weren't loaded at startup
-    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
-    const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+    const senderId = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKESEL_SENDER_ID;
+    const apiKey = process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY;
 
-    if (!accountSid || !authToken || !phoneNumber) {
-      console.warn('⚠️ Twilio not configured. Missing:', {
-        accountSid: !!accountSid,
-        authToken: !!authToken,
-        phoneNumber: !!phoneNumber
+    if (!senderId || !apiKey) {
+      console.warn('⚠️ Arkesel not configured. Missing:', {
+        senderId: !!senderId,
+        apiKey: !!apiKey
       });
       return res.status(503).json({ 
         error: 'SMS service not configured',
-        suggestion: 'Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to your .env file'
+        suggestion: 'Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to your .env file'
       });
     }
 
-    // Initialize Twilio client if not already initialized
-    let client = twilioClient;
+    // Initialize Arkesel client if not already initialized
+    let client = arkeselClient;
     if (!client) {
       try {
-        client = twilio(accountSid, authToken);
-        console.log('✅ Twilio client initialized');
+        client = new Arkesel(senderId, apiKey);
+        console.log('✅ Arkesel client initialized');
       } catch (initError) {
-        console.error('❌ Failed to initialize Twilio client:', initError);
+        console.error('❌ Failed to initialize Arkesel client:', initError);
         return res.status(500).json({ 
           error: 'Failed to initialize SMS service',
           details: initError.message
@@ -738,31 +735,34 @@ app.post('/api/send-welcome-sms', async (req, res) => {
     const messageText = createWelcomeSMSText(memberName, plan, startDate, expiryDate);
 
     console.log('📱 Attempting to send SMS:', {
-      from: phoneNumber,
+      senderId: senderId,
       to: formattedPhone,
       messageLength: messageText.length
     });
 
-    const message = await client.messages.create({
-      body: messageText,
-      from: phoneNumber,
-      to: formattedPhone
+    // Arkesel uses callback pattern, convert to Promise
+    const result = await new Promise((resolve, reject) => {
+      client.send(formattedPhone, messageText, null, (callback) => {
+        if (callback && callback.status === 'success') {
+          resolve(callback);
+        } else {
+          reject(new Error(callback?.message || 'Failed to send SMS'));
+        }
+      });
     });
 
-    console.log('✅ Welcome SMS sent successfully:', message.sid);
-    res.json({ success: true, data: { sid: message.sid, status: message.status } });
+    console.log('✅ Welcome SMS sent successfully:', result);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('❌ Error sending welcome SMS:', error);
     console.error('Error details:', {
       message: error.message,
-      code: error.code,
-      status: error.status,
-      moreInfo: error.moreInfo
+      error: error.toString()
     });
     res.status(500).json({ 
       error: error.message || 'Failed to send SMS',
-      code: error.code || 'SMS_ERROR',
-      details: error.moreInfo || error.toString()
+      code: 'SMS_ERROR',
+      details: error.toString()
     });
   }
 });
@@ -851,26 +851,25 @@ app.post('/api/send-message-sms', async (req, res) => {
     }
 
     // Re-check environment variables in case they weren't loaded at startup
-    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
-    const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+    const senderId = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKESEL_SENDER_ID;
+    const apiKey = process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY;
 
-    if (!accountSid || !authToken || !phoneNumber) {
-      console.warn('⚠️ Twilio not configured. Skipping SMS send.');
+    if (!senderId || !apiKey) {
+      console.warn('⚠️ Arkesel not configured. Skipping SMS send.');
       return res.status(503).json({ 
         error: 'SMS service not configured',
-        suggestion: 'Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to your .env file'
+        suggestion: 'Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to your .env file'
       });
     }
 
-    // Initialize Twilio client if not already initialized
-    let client = twilioClient;
+    // Initialize Arkesel client if not already initialized
+    let client = arkeselClient;
     if (!client) {
       try {
-        client = twilio(accountSid, authToken);
-        console.log('✅ Twilio client initialized');
+        client = new Arkesel(senderId, apiKey);
+        console.log('✅ Arkesel client initialized');
       } catch (initError) {
-        console.error('❌ Failed to initialize Twilio client:', initError);
+        console.error('❌ Failed to initialize Arkesel client:', initError);
         return res.status(500).json({ 
           error: 'Failed to initialize SMS service',
           details: initError.message
@@ -887,31 +886,34 @@ app.post('/api/send-message-sms', async (req, res) => {
     const messageText = `Goodlife Fitness\n\nHi ${memberName},\n\n${message}\n\n- Goodlife Fitness Team`;
 
     console.log('📱 Attempting to send message SMS:', {
-      from: phoneNumber,
+      senderId: senderId,
       to: formattedPhone,
       messageLength: messageText.length
     });
 
-    const twilioMessage = await client.messages.create({
-      body: messageText,
-      from: phoneNumber,
-      to: formattedPhone
+    // Arkesel uses callback pattern, convert to Promise
+    const result = await new Promise((resolve, reject) => {
+      client.send(formattedPhone, messageText, null, (callback) => {
+        if (callback && callback.status === 'success') {
+          resolve(callback);
+        } else {
+          reject(new Error(callback?.message || 'Failed to send SMS'));
+        }
+      });
     });
 
-    console.log('✅ Message SMS sent successfully:', twilioMessage.sid);
-    res.json({ success: true, data: { sid: twilioMessage.sid, status: twilioMessage.status } });
+    console.log('✅ Message SMS sent successfully:', result);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('❌ Error sending message SMS:', error);
     console.error('Error details:', {
       message: error.message,
-      code: error.code,
-      status: error.status,
-      moreInfo: error.moreInfo
+      error: error.toString()
     });
     res.status(500).json({ 
       error: error.message || 'Failed to send SMS',
-      code: error.code || 'SMS_ERROR',
-      details: error.moreInfo || error.toString()
+      code: 'SMS_ERROR',
+      details: error.toString()
     });
   }
 });
@@ -926,7 +928,7 @@ app.listen(PORT, () => {
   console.log(`📧 Resend API configured: ${resend ? 'Yes' : 'No'}`);
   console.log(`📮 From Email: ${RESEND_FROM_EMAIL}`);
   console.log(`🔑 API Key: ${process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY ? 'Set' : 'Missing'}`);
-  console.log(`📱 Twilio SMS configured: ${twilioClient && TWILIO_PHONE_NUMBER ? 'Yes' : 'No'}`);
+  console.log(`📱 Arkesel SMS configured: ${arkeselClient ? 'Yes' : 'No'}`);
   if (twilioClient && TWILIO_PHONE_NUMBER) {
     console.log(`📞 Twilio Phone: ${TWILIO_PHONE_NUMBER}`);
   } else {

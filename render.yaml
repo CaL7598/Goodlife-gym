@@ -12,6 +12,5 @@ services:
       # Add these environment variables in Render dashboard:
       # RESEND_API_KEY
       # RESEND_FROM_EMAIL
-      # TWILIO_ACCOUNT_SID
-      # TWILIO_AUTH_TOKEN
-      # TWILIO_PHONE_NUMBER
+      # ARKESEL_SENDER_ID
+      # ARKESEL_API_KEY

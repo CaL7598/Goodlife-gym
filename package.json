@@ -25,7 +25,7 @@
     "react-router-dom": "^6.21.1",
     "recharts": "^2.10.3",
     "resend": "^3.2.0",
-    "twilio": "^4.20.0"
+    "arkesel-js": "^1.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

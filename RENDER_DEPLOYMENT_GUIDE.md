@@ -75,17 +75,14 @@ Scroll down to the **"Environment Variables"** section and click **"Add Environm
 
 ### Optional Variables (if using SMS):
 
-5. **TWILIO_ACCOUNT_SID**
-   - Key: `TWILIO_ACCOUNT_SID`
-   - Value: `your_twilio_account_sid`
+5. **ARKESEL_SENDER_ID**
+   - Key: `ARKESEL_SENDER_ID`
+   - Value: `Goodlife Fitness` (or your approved sender ID)
 
-6. **TWILIO_AUTH_TOKEN**
-   - Key: `TWILIO_AUTH_TOKEN`
-   - Value: `your_twilio_auth_token`
-
-7. **TWILIO_PHONE_NUMBER**
-   - Key: `TWILIO_PHONE_NUMBER`
-   - Value: `+1234567890`
+6. **ARKESEL_API_KEY**
+   - Key: `ARKESEL_API_KEY`
+   - Value: `your_arkesel_api_key`
+   - (Get this from your Arkesel dashboard)
 
 ## Step 6: Deploy
 
