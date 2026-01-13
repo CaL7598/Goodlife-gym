@@ -3,6 +3,29 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Diagnostic logging (only in development or if URL is missing)
+if (import.meta.env.DEV || !supabaseUrl) {
+  console.log('🔍 Supabase Configuration Check:');
+  console.log('  VITE_SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : '❌ NOT SET');
+  console.log('  VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : '❌ NOT SET');
+  
+  if (!supabaseUrl) {
+    console.error('❌ CRITICAL: VITE_SUPABASE_URL is not set!');
+    console.error('   → Check GitHub Secrets: Settings → Secrets → Actions → VITE_SUPABASE_URL');
+    console.error('   → After adding secret, trigger new deployment');
+  }
+  if (!supabaseAnonKey) {
+    console.error('❌ CRITICAL: VITE_SUPABASE_ANON_KEY is not set!');
+    console.error('   → Check GitHub Secrets: Settings → Secrets → Actions → VITE_SUPABASE_ANON_KEY');
+    console.error('   → After adding secret, trigger new deployment');
+  }
+  if (supabaseUrl && !supabaseUrl.includes('.supabase.co')) {
+    console.warn('⚠️ WARNING: Supabase URL does not look correct!');
+    console.warn('   Expected format: https://xxxxxxxxxxxxx.supabase.co');
+    console.warn('   Current value:', supabaseUrl);
+  }
+}
+
 // Only create Supabase client if both URL and key are provided
 let supabase: SupabaseClient | null = null;
 
@@ -27,12 +50,14 @@ if (supabaseUrl && supabaseAnonKey) {
     },
   },
     });
+    console.log('✅ Supabase client initialized successfully');
   } catch (error) {
-    console.warn('Failed to initialize Supabase client:', error);
+    console.error('❌ Failed to initialize Supabase client:', error);
     supabase = null;
   }
 } else {
-  console.warn('Supabase environment variables not configured. Some features may not work.');
+  console.warn('⚠️ Supabase environment variables not configured. Some features may not work.');
+  console.warn('   See FRONTEND_ENV_VARS_SETUP.md for setup instructions');
 }
 
 // Export supabase - will be null if not configured
