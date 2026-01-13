@@ -50,7 +50,8 @@ export interface MessageEmailParams {
  */
 export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<boolean> => {
   if (!API_BASE_URL) {
-    console.warn('Email service not configured: VITE_API_URL not set. Email features disabled.');
+    const errorMsg = '❌ Email service not configured: VITE_API_URL environment variable is not set. Email features are disabled. Please deploy the backend server (server.js) and set VITE_API_URL to your backend URL. See EMAIL_FIX_GUIDE.md for detailed instructions.';
+    console.error(errorMsg);
     return false;
   }
   try {
@@ -105,7 +106,8 @@ export const sendWelcomeEmail = async (params: WelcomeEmailParams): Promise<bool
  */
 export const sendPaymentEmail = async (params: PaymentEmailParams): Promise<boolean> => {
   if (!API_BASE_URL) {
-    console.warn('Email service not configured: VITE_API_URL not set. Email features disabled.');
+    const errorMsg = '❌ Email service not configured: VITE_API_URL environment variable is not set. Email features are disabled. Please deploy the backend server (server.js) and set VITE_API_URL to your backend URL. See EMAIL_FIX_GUIDE.md for detailed instructions.';
+    console.error(errorMsg);
     return false;
   }
   try {
