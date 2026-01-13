@@ -13,7 +13,8 @@ import {
   PaymentMethod,
   PaymentStatus,
   UserRole,
-  Privilege
+  Privilege,
+  PasswordHistoryEntry
 } from '../types';
 
 // Helper function to check if Supabase is configured
@@ -137,6 +138,21 @@ export const staffService = {
     return (data || []).map(mapStaffFromDB);
   },
 
+  async getById(id: string): Promise<StaffMember | null> {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching staff by id:', error);
+      return null;
+    }
+    
+    return data ? mapStaffFromDB(data) : null;
+  },
+
   async getByEmail(email: string): Promise<StaffMember | null> {
     const { data, error } = await supabase
       .from('staff')
@@ -171,15 +187,57 @@ export const staffService = {
     return data ? mapStaffFromDB(data) : null;
   },
 
-  async update(id: string, updates: Partial<StaffMember>, retries: number = 3): Promise<StaffMember> {
+  async update(id: string, updates: Partial<StaffMember> & { password?: string }, retries: number = 3): Promise<StaffMember> {
     let lastError: any = null;
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
+        // If password is being updated, get current password and add to history
+        let passwordHistoryUpdate: any = {};
+        if (updates.password) {
+          // Get current staff data to retrieve current password
+          const { data: currentStaff } = await supabase
+            .from('staff')
+            .select('password, password_history')
+            .eq('id', id)
+            .single();
+
+          if (currentStaff && currentStaff.password && currentStaff.password !== updates.password) {
+            // Parse existing password history
+            let passwordHistory: PasswordHistoryEntry[] = [];
+            if (currentStaff.password_history) {
+              try {
+                passwordHistory = JSON.parse(currentStaff.password_history);
+              } catch (e) {
+                console.warn('Error parsing existing password history:', e);
+              }
+            }
+
+            // Add current password to history
+            passwordHistory.push({
+              password: currentStaff.password,
+              changedAt: new Date().toISOString()
+            });
+
+            // Keep only last 10 passwords in history
+            if (passwordHistory.length > 10) {
+              passwordHistory = passwordHistory.slice(-10);
+            }
+
+            passwordHistoryUpdate.password_history = JSON.stringify(passwordHistory);
+          }
+        }
+
+        const dbData = mapStaffToDB(updates);
+        if (updates.password) {
+          dbData.password = updates.password;
+        }
+
         const { data, error } = await supabase
           .from('staff')
           .update({
-            ...mapStaffToDB(updates),
+            ...dbData,
+            ...passwordHistoryUpdate,
             updated_at: new Date().toISOString()
           })
           .eq('id', id)
@@ -744,6 +802,19 @@ function mapStaffFromDB(db: any): StaffMember {
       privileges = undefined;
     }
   }
+
+  // Parse password history
+  let passwordHistory: PasswordHistoryEntry[] | undefined = undefined;
+  if (db.password_history) {
+    try {
+      const parsed = JSON.parse(db.password_history);
+      if (Array.isArray(parsed)) {
+        passwordHistory = parsed;
+      }
+    } catch (error) {
+      console.error('❌ Error parsing password_history for', db.email, ':', error);
+    }
+  }
   
   return {
     id: db.id,
@@ -753,7 +824,10 @@ function mapStaffFromDB(db: any): StaffMember {
     position: db.position,
     phone: db.phone,
     avatar: db.avatar,
-    privileges
+    privileges,
+    password: db.password, // Include password for admin visibility
+    passwordHistory: passwordHistory,
+    createdAt: db.created_at
   };
 }
 
@@ -765,7 +839,7 @@ function mapStaffToDB(staff: Partial<StaffMember> & { password?: string }): any 
   if (staff.position !== undefined) db.position = staff.position;
   if (staff.phone !== undefined) db.phone = staff.phone;
   if (staff.avatar !== undefined) db.avatar = staff.avatar;
-  if (staff.password !== undefined) db.password = staff.password;
+  // Note: password is handled separately in update() to manage password history
   if (staff.privileges !== undefined) {
     // Only save if it's a non-empty array, otherwise save as null
     if (Array.isArray(staff.privileges) && staff.privileges.length > 0) {

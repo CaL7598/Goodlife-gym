@@ -3,7 +3,7 @@ import React from 'react';
 import { UserRole, StaffMember, Privilege } from '../types';
 import { NAVIGATION_ITEMS } from '../constants';
 import { hasPrivilege } from '../lib/privileges';
-import StaffProfileModal from './StaffProfileModal';
+import StaffProfileEditModal from './StaffProfileEditModal';
 import { 
   LogOut, 
   Menu, 
@@ -23,6 +23,7 @@ interface AdminLayoutProps {
   currentPage: string;
   role: UserRole;
   staff: StaffMember[];
+  setStaff: React.Dispatch<React.SetStateAction<StaffMember[]>>;
   userEmail: string;
   onLogout: () => void;
   isOnShift?: boolean;
@@ -320,12 +321,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </main>
       </div>
 
-      {/* Staff Profile Modal */}
-      <StaffProfileModal
+      {/* Staff Profile Edit Modal */}
+      <StaffProfileEditModal
         isOpen={showProfileModal}
         staff={currentStaff || null}
         role={role}
+        isOwnProfile={true}
         onClose={() => setShowProfileModal(false)}
+        onUpdate={(updatedStaff) => {
+          setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+        }}
       />
     </div>
   );

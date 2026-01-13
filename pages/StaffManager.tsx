@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StaffMember, UserRole } from '../types';
-import { Search, Plus, Trash2, UserPlus, User, Mail, Phone, Briefcase, Shield, X, AlertCircle, Edit2, Save } from 'lucide-react';
+import { Search, Plus, Trash2, UserPlus, User, Mail, Phone, Briefcase, Shield, X, AlertCircle, Edit2, Save, Eye, EyeOff, Calendar, Lock, Upload, Trash2 as TrashIcon } from 'lucide-react';
 import { staffService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -17,7 +17,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffMember & { password?: string } | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffMember & { password?: string; currentPassword?: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     staffMember: StaffMember | null;
@@ -140,9 +140,89 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
     }
   };
 
-  const handleEditStaff = (staffMember: StaffMember) => {
-    setEditingStaff({ ...staffMember, password: '' });
-    setShowEditModal(true);
+  const handleEditStaff = async (staffMember: StaffMember) => {
+    // Load full staff data including password from database
+    try {
+      const fullStaff = await staffService.getById(staffMember.id);
+      if (fullStaff) {
+        // Store current password separately, new password field starts empty
+        setEditingStaff({ 
+          ...fullStaff, 
+          currentPassword: fullStaff.password, // Store current password for display
+          password: '' // This is for the new password input
+        });
+        setAvatarPreview(fullStaff.avatar || null);
+        setShowEditModal(true);
+      } else {
+        setEditingStaff({ 
+          ...staffMember, 
+          currentPassword: staffMember.password,
+          password: '' 
+        });
+        setAvatarPreview(staffMember.avatar || null);
+        setShowEditModal(true);
+      }
+    } catch (error) {
+      console.error('Error loading staff data:', error);
+      setEditingStaff({ 
+        ...staffMember, 
+        currentPassword: staffMember.password,
+        password: '' 
+      });
+      setAvatarPreview(staffMember.avatar || null);
+      setShowEditModal(true);
+    }
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showError('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showError('Image size must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setAvatarPreview(base64String);
+        if (editingStaff) {
+          setEditingStaff({ ...editingStaff, avatar: base64String });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarPreview(null);
+    if (editingStaff) {
+      setEditingStaff({ ...editingStaff, avatar: undefined });
+    }
+  };
+
+  const togglePasswordVisibility = (staffId: string) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [staffId]: !prev[staffId]
+    }));
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return 'N/A';
+    }
   };
 
   const handleUpdateStaff = async (e: React.FormEvent) => {
@@ -181,7 +261,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
           email: editingStaff.email,
           phone: editingStaff.phone,
           position: editingStaff.position,
-          role: editingStaff.role
+          role: editingStaff.role,
+          avatar: editingStaff.avatar
         };
 
         // Only include password if it was changed
@@ -297,6 +378,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Staff Member</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Position</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Contact</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Password</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Join Date</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Role</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -325,6 +408,32 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
                         <div className="flex items-center gap-2 text-slate-600">
                           <Phone size={16} className="text-slate-400" />
                           <span>{staffMember.phone}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          {staffMember.password ? (
+                            <>
+                              <span className="font-mono text-sm text-slate-700">
+                                {showPasswords[staffMember.id] ? staffMember.password : '••••••••'}
+                              </span>
+                              <button
+                                onClick={() => togglePasswordVisibility(staffMember.id)}
+                                className="p-1 text-slate-500 hover:text-slate-700 transition-colors"
+                                title={showPasswords[staffMember.id] ? 'Hide password' : 'Show password'}
+                              >
+                                {showPasswords[staffMember.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-slate-400 text-sm">Not set</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Calendar size={16} className="text-slate-400" />
+                          <span className="text-sm">{formatDate(staffMember.createdAt)}</span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -480,6 +589,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingStaff(null);
+                  setAvatarPreview(null);
                 }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
@@ -488,6 +598,48 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
             </div>
 
             <form onSubmit={handleUpdateStaff} className="p-6 space-y-4">
+              {/* Avatar Upload Section */}
+              <div className="flex flex-col items-center mb-4 pb-4 border-b border-slate-200">
+                <div className="relative mb-3">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt={editingStaff.fullName}
+                      className="w-20 h-20 rounded-full object-cover border-4 border-slate-200"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-rose-100 flex items-center justify-center">
+                      <User size={32} className="text-rose-600" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                    <span className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors text-sm font-medium">
+                      <Upload size={16} />
+                      {avatarPreview ? 'Change Photo' : 'Upload Photo'}
+                    </span>
+                  </label>
+                  {avatarPreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                    >
+                      <Trash2 size={16} />
+                      Remove Photo
+                    </button>
+                  )}
+                  <p className="text-xs text-slate-500">Max: 5MB</p>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
                 <input
@@ -547,17 +699,53 @@ const StaffManager: React.FC<StaffManagerProps> = ({ staff, setStaff, role, logA
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                {editingStaff.currentPassword ? (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-mono text-sm text-slate-700 bg-slate-50 px-3 py-2 border border-slate-300 rounded-lg flex-1">
+                      {editingStaff.currentPassword}
+                    </span>
+                    <Lock size={16} className="text-slate-400" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 mb-2">No password set</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
                 <input
                   type="password"
                   value={editingStaff.password || ''}
                   onChange={(e) => setEditingStaff({ ...editingStaff, password: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                  placeholder="Leave blank to keep current password"
+                  placeholder="Enter new password to change"
                   minLength={6}
                 />
-                <p className="text-xs text-slate-500 mt-1">Leave blank to keep current password. Minimum 6 characters if changing.</p>
+                <p className="text-xs text-slate-500 mt-1">Enter new password to change. Minimum 6 characters. Old password will be saved to history.</p>
               </div>
+
+              {editingStaff.passwordHistory && editingStaff.passwordHistory.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Password History</label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                    <div className="space-y-2">
+                      {editingStaff.passwordHistory.map((entry, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Lock size={14} className="text-slate-400" />
+                            <span className="font-mono text-slate-700">{entry.password}</span>
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            {formatDate(entry.changedAt)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Previous passwords (most recent first)</p>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

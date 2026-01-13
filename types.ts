@@ -65,6 +65,11 @@ export interface Member {
   photo?: string; // Base64 encoded image or URL
 }
 
+export interface PasswordHistoryEntry {
+  password: string;
+  changedAt: string;
+}
+
 export interface StaffMember {
   id: string;
   fullName: string;
@@ -74,6 +79,9 @@ export interface StaffMember {
   phone: string;
   avatar?: string;
   privileges?: Privilege[]; // Privileges assigned by Super Admin
+  password?: string; // Current password (visible to admin)
+  passwordHistory?: PasswordHistoryEntry[]; // History of old passwords
+  createdAt?: string; // When staff member joined
 }
 
 export interface PaymentRecord {

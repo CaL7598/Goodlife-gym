@@ -557,11 +557,12 @@ const App: React.FC = () => {
             {renderPage()}
           </PublicLayout>
         ) : (
-          <AdminLayout 
-            setCurrentPage={setCurrentPage} 
-            currentPage={currentPage} 
+          <AdminLayout
+            setCurrentPage={setCurrentPage}
+            currentPage={currentPage}
             role={userRole}
             staff={staff}
+            setStaff={setStaff}
             userEmail={userEmail}
             onLogout={handleLogout}
             isOnShift={isOnShift}
