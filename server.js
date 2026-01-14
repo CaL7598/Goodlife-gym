@@ -709,7 +709,11 @@ app.post('/api/send-welcome-sms', async (req, res) => {
       });
       return res.status(503).json({ 
         error: 'SMS service not configured',
-        suggestion: 'Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to your .env file'
+        suggestion: senderId 
+          ? 'Add ARKESEL_API_KEY to your .env file'
+          : apiKey
+          ? 'Add ARKESEL_SENDER_ID to your .env file. You need to register and get approval for a sender ID from Arkesel. See ARKESEL_SENDER_ID_GUIDE.md for instructions.'
+          : 'Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to your .env file. For sender ID, you need to register and get approval from Arkesel. See ARKESEL_SENDER_ID_GUIDE.md for instructions.'
       });
     }
 
