@@ -221,12 +221,26 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     
     if (supabaseUrl && supabaseKey) {
       try {
+        // Check if member with this email already exists
+        const existingMember = await membersService.getByEmail(memberData.email);
+        if (existingMember) {
+          showError(`A member with email "${memberData.email}" already exists. Please use a different email address or edit the existing member.`);
+          return;
+        }
+
         // Save to Supabase database
         createdMember = await membersService.create(memberData);
         console.log('✅ Member saved to Supabase:', createdMember.id);
         showSuccess(`Member ${createdMember.fullName} has been successfully registered!`);
       } catch (error: any) {
         console.error('❌ Error saving member to Supabase:', error);
+        
+        // Check for duplicate email error (PostgreSQL error code 23505)
+        if (error?.code === '23505' || error?.message?.includes('duplicate key') || error?.message?.includes('members_email_key')) {
+          showError(`A member with email "${memberData.email}" already exists. Please use a different email address or edit the existing member.`);
+          return;
+        }
+        
         // Show error to user - don't create local fallback as it won't persist
         const errorMessage = error?.message || 'Failed to save member to database';
         showError(`Failed to save member: ${errorMessage}. Please check your connection and try again.`);
