@@ -786,26 +786,25 @@ app.post('/api/send-payment-sms', async (req, res) => {
     }
 
     // Re-check environment variables in case they weren't loaded at startup
-    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.VITE_TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.VITE_TWILIO_AUTH_TOKEN;
-    const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.VITE_TWILIO_PHONE_NUMBER;
+    const senderId = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKESEL_SENDER_ID;
+    const apiKey = process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY;
 
-    if (!accountSid || !authToken || !phoneNumber) {
-      console.warn('⚠️ Twilio not configured. Skipping SMS send.');
+    if (!senderId || !apiKey) {
+      console.warn('⚠️ Arkesel not configured. Skipping SMS send.');
       return res.status(503).json({ 
         error: 'SMS service not configured',
-        suggestion: 'Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to your .env file'
+        suggestion: 'Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to your .env file'
       });
     }
 
-    // Initialize Twilio client if not already initialized
-    let client = twilioClient;
+    // Initialize Arkesel client if not already initialized
+    let client = arkeselClient;
     if (!client) {
       try {
-        client = twilio(accountSid, authToken);
-        console.log('✅ Twilio client initialized');
+        client = new Arkesel(senderId, apiKey);
+        console.log('✅ Arkesel client initialized');
       } catch (initError) {
-        console.error('❌ Failed to initialize Twilio client:', initError);
+        console.error('❌ Failed to initialize Arkesel client:', initError);
         return res.status(500).json({ 
           error: 'Failed to initialize SMS service',
           details: initError.message
@@ -821,31 +820,34 @@ app.post('/api/send-payment-sms', async (req, res) => {
     const messageText = createPaymentSMSText(memberName, amount, paymentMethod, paymentDate, transactionId, expiryDate);
 
     console.log('📱 Attempting to send payment SMS:', {
-      from: phoneNumber,
+      senderId: senderId,
       to: formattedPhone,
       messageLength: messageText.length
     });
 
-    const message = await client.messages.create({
-      body: messageText,
-      from: phoneNumber,
-      to: formattedPhone
+    // Arkesel uses callback pattern, convert to Promise
+    const result = await new Promise((resolve, reject) => {
+      client.send(formattedPhone, messageText, null, (callback) => {
+        if (callback && callback.status === 'success') {
+          resolve(callback);
+        } else {
+          reject(new Error(callback?.message || 'Failed to send SMS'));
+        }
+      });
     });
 
-    console.log('✅ Payment SMS sent successfully:', message.sid);
-    res.json({ success: true, data: { sid: message.sid, status: message.status } });
+    console.log('✅ Payment SMS sent successfully:', result);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('❌ Error sending payment SMS:', error);
     console.error('Error details:', {
       message: error.message,
-      code: error.code,
-      status: error.status,
-      moreInfo: error.moreInfo
+      error: error.toString()
     });
     res.status(500).json({ 
       error: error.message || 'Failed to send SMS',
-      code: error.code || 'SMS_ERROR',
-      details: error.moreInfo || error.toString()
+      code: 'SMS_ERROR',
+      details: error.toString()
     });
   }
 });
@@ -938,10 +940,10 @@ app.listen(PORT, () => {
   console.log(`📮 From Email: ${RESEND_FROM_EMAIL}`);
   console.log(`🔑 API Key: ${process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY ? 'Set' : 'Missing'}`);
   console.log(`📱 Arkesel SMS configured: ${arkeselClient ? 'Yes' : 'No'}`);
-  if (twilioClient && TWILIO_PHONE_NUMBER) {
-    console.log(`📞 Twilio Phone: ${TWILIO_PHONE_NUMBER}`);
+  if (arkeselClient) {
+    console.log(`📱 Arkesel Sender ID: ${ARKESEL_SENDER_ID || 'Not set'}`);
   } else {
-    console.log(`⚠️  Twilio not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to .env`);
+    console.log(`⚠️  Arkesel not configured. Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to .env`);
   }
   if (RESEND_FROM_EMAIL.includes('@resend.dev')) {
     console.log(`⚠️  WARNING: Using test domain. Update RESEND_FROM_EMAIL in .env to use your verified domain!`);
