@@ -31,12 +31,12 @@ const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKE
 const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY;
 const arkeselClient = ARKESEL_SENDER_ID && ARKESEL_API_KEY ? new Arkesel(ARKESEL_SENDER_ID, ARKESEL_API_KEY) : null;
 
-// Helper function to format phone number (add country code if missing)
+// Helper function to format phone number for Arkesel (233XXXXXXXXX format without +)
 function formatPhoneNumber(phone) {
   if (!phone) return null;
   // Remove any non-digit characters
   let cleaned = phone.replace(/\D/g, '');
-  // If it doesn't start with country code, assume Ghana (+233)
+  // If it doesn't start with country code, assume Ghana (233)
   if (!cleaned.startsWith('233')) {
     // If it starts with 0, replace with 233
     if (cleaned.startsWith('0')) {
@@ -45,7 +45,8 @@ function formatPhoneNumber(phone) {
       cleaned = '233' + cleaned;
     }
   }
-  return '+' + cleaned;
+  // Arkesel expects format: 233XXXXXXXXX (without +)
+  return cleaned;
 }
 
 // Helper function to create SMS text from email content
