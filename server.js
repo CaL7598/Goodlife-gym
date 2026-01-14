@@ -1,10 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import { Resend } from 'resend';
-import Arkesel from 'arkesel-js';
+import { createRequire } from 'module';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+
+// Import CommonJS module (arkesel-js) in ES module context
+const require = createRequire(import.meta.url);
+const Arkesel = require('arkesel-js');
 
 // Load environment variables
 dotenv.config();
