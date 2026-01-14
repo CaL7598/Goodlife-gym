@@ -778,11 +778,15 @@ app.post('/api/send-welcome-sms', async (req, res) => {
     });
 
     // Arkesel uses callback pattern, convert to Promise
+    // Arkesel success response: { code: "ok", message: "Successfully Send", balance: number, user: string }
+    // Arkesel error response: { code: "102", message: "Error message" }
     const result = await new Promise((resolve, reject) => {
       client.send(formattedPhone, messageText, null, (callback) => {
-        if (callback && callback.status === 'success') {
+        if (callback && callback.code === 'ok') {
+          // Success - Arkesel returns code: "ok" for successful sends
           resolve(callback);
         } else {
+          // Error - Arkesel returns error code and message
           reject(new Error(callback?.message || 'Failed to send SMS'));
         }
       });
@@ -854,11 +858,15 @@ app.post('/api/send-payment-sms', async (req, res) => {
     });
 
     // Arkesel uses callback pattern, convert to Promise
+    // Arkesel success response: { code: "ok", message: "Successfully Send", balance: number, user: string }
+    // Arkesel error response: { code: "102", message: "Error message" }
     const result = await new Promise((resolve, reject) => {
       client.send(formattedPhone, messageText, null, (callback) => {
-        if (callback && callback.status === 'success') {
+        if (callback && callback.code === 'ok') {
+          // Success - Arkesel returns code: "ok" for successful sends
           resolve(callback);
         } else {
+          // Error - Arkesel returns error code and message
           reject(new Error(callback?.message || 'Failed to send SMS'));
         }
       });
@@ -931,11 +939,15 @@ app.post('/api/send-message-sms', async (req, res) => {
     });
 
     // Arkesel uses callback pattern, convert to Promise
+    // Arkesel success response: { code: "ok", message: "Successfully Send", balance: number, user: string }
+    // Arkesel error response: { code: "102", message: "Error message" }
     const result = await new Promise((resolve, reject) => {
       client.send(formattedPhone, messageText, null, (callback) => {
-        if (callback && callback.status === 'success') {
+        if (callback && callback.code === 'ok') {
+          // Success - Arkesel returns code: "ok" for successful sends
           resolve(callback);
         } else {
+          // Error - Arkesel returns error code and message
           reject(new Error(callback?.message || 'Failed to send SMS'));
         }
       });
