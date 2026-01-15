@@ -389,10 +389,25 @@ export const paymentsService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all payment IDs first, then delete them
+    const { data, error: fetchError } = await supabase
+      .from('payments')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching payments for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(p => p.id);
     const { error } = await supabase
       .from('payments')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing payments:', error);
@@ -464,10 +479,25 @@ export const announcementsService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all announcement IDs first, then delete them
+    const { data, error: fetchError } = await supabase
+      .from('announcements')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching announcements for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(a => a.id);
     const { error } = await supabase
       .from('announcements')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing announcements:', error);
@@ -536,10 +566,25 @@ export const galleryService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all gallery IDs first, then delete them
+    const { data, error: fetchError } = await supabase
+      .from('gallery')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching gallery for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(g => g.id);
     const { error } = await supabase
       .from('gallery')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing gallery:', error);
@@ -580,10 +625,25 @@ export const activityLogsService = {
   }
   ,
   async clearAll(): Promise<void> {
-    const { error } = await supabase
+    // Get all activity log IDs first, then delete them
+    const { data, error: fetchError } = await requireSupabase()
+      .from('activity_logs')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching activity logs for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(log => log.id);
+    const { error } = await requireSupabase()
       .from('activity_logs')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing activity logs:', error);
@@ -640,10 +700,25 @@ export const attendanceService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all attendance record IDs first, then delete them
+    const { data, error: fetchError } = await supabase
+      .from('attendance_records')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching attendance records for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(record => record.id);
     const { error } = await supabase
       .from('attendance_records')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing attendance records:', error);
@@ -712,10 +787,25 @@ export const clientCheckInService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all check-in IDs first, then delete them
+    const { data, error: fetchError } = await supabase
+      .from('client_checkins')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching client check-ins for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(checkIn => checkIn.id);
     const { error } = await supabase
       .from('client_checkins')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing client check-ins:', error);
@@ -862,10 +952,25 @@ export const equipmentPostsService = {
   },
 
   async clearAll(): Promise<void> {
+    // Get all equipment post IDs first, then delete them
+    const { data, error: fetchError } = await requireSupabase()
+      .from('equipment_posts')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching equipment posts for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(post => post.id);
     const { error } = await requireSupabase()
       .from('equipment_posts')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing equipment posts:', error);
@@ -1273,11 +1378,26 @@ export const maintenanceLogsService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all maintenance log IDs first, then delete them
+    const { data, error: fetchError } = await requireSupabase()
+      .from('maintenance_logs')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching maintenance logs for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(log => log.id);
     const { error } = await requireSupabase()
       .from('maintenance_logs')
       .delete()
-      .neq('id', '');
-
+      .in('id', ids);
+    
     if (error) {
       console.error('Error clearing maintenance logs:', error);
       throw error;
@@ -1367,10 +1487,25 @@ export const expensesService = {
   }
   ,
   async clearAll(): Promise<void> {
+    // Get all expense IDs first, then delete them
+    const { data, error: fetchError } = await requireSupabase()
+      .from('expenses')
+      .select('id');
+    
+    if (fetchError) {
+      console.error('Error fetching expenses for clearing:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!data || data.length === 0) {
+      return; // Nothing to delete
+    }
+    
+    const ids = data.map(expense => expense.id);
     const { error } = await requireSupabase()
       .from('expenses')
       .delete()
-      .neq('id', '');
+      .in('id', ids);
     
     if (error) {
       console.error('Error clearing expenses:', error);
