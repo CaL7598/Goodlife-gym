@@ -9,6 +9,7 @@ import {
   AttendanceRecord,
   ClientCheckIn,
   GymEquipment,
+  EquipmentPost,
   MaintenanceLog,
   Expense,
   SubscriptionPlan,
@@ -386,6 +387,18 @@ export const paymentsService = {
     
     return mapPaymentFromDB(data);
   }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('payments')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing payments:', error);
+      throw error;
+    }
+  }
 };
 
 // Announcements
@@ -449,6 +462,18 @@ export const announcementsService = {
       throw error;
     }
   }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('announcements')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing announcements:', error);
+      throw error;
+    }
+  }
 };
 
 // Gallery
@@ -509,6 +534,18 @@ export const galleryService = {
       throw error;
     }
   }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('gallery')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing gallery:', error);
+      throw error;
+    }
+  }
 };
 
 // Activity Logs
@@ -540,6 +577,18 @@ export const activityLogsService = {
     }
     
     return mapActivityLogFromDB(data);
+  }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('activity_logs')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing activity logs:', error);
+      throw error;
+    }
   }
 };
 
@@ -588,6 +637,18 @@ export const attendanceService = {
     }
     
     return mapAttendanceFromDB(data);
+  }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('attendance_records')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing attendance records:', error);
+      throw error;
+    }
   }
 };
 
@@ -646,6 +707,18 @@ export const clientCheckInService = {
     
     if (error) {
       console.error('Error deleting client check-in:', error);
+      throw error;
+    }
+  }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('client_checkins')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing client check-ins:', error);
       throw error;
     }
   }
@@ -724,6 +797,78 @@ export const equipmentService = {
     
     if (error) {
       console.error('Error deleting equipment:', error);
+      throw error;
+    }
+  }
+};
+
+// Equipment Posts (Sales & Equipment updates)
+export const equipmentPostsService = {
+  async getAll(): Promise<EquipmentPost[]> {
+    const { data, error } = await requireSupabase()
+      .from('equipment_posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching equipment posts:', error);
+      throw error;
+    }
+    
+    return (data || []).map(mapEquipmentPostFromDB);
+  },
+
+  async create(post: Omit<EquipmentPost, 'id'>): Promise<EquipmentPost> {
+    const { data, error } = await requireSupabase()
+      .from('equipment_posts')
+      .insert(mapEquipmentPostToDB(post))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating equipment post:', error);
+      throw error;
+    }
+    
+    return mapEquipmentPostFromDB(data);
+  },
+
+  async update(id: string, updates: Partial<EquipmentPost>): Promise<EquipmentPost> {
+    const { data, error } = await requireSupabase()
+      .from('equipment_posts')
+      .update(mapEquipmentPostToDB(updates))
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating equipment post:', error);
+      throw error;
+    }
+    
+    return mapEquipmentPostFromDB(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('equipment_posts')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting equipment post:', error);
+      throw error;
+    }
+  },
+
+  async clearAll(): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('equipment_posts')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing equipment posts:', error);
       throw error;
     }
   }
@@ -1050,6 +1195,24 @@ function mapEquipmentToDB(equipment: Partial<GymEquipment>): any {
   return db;
 }
 
+function mapEquipmentPostFromDB(db: any): EquipmentPost {
+  return {
+    id: db.id,
+    title: db.title,
+    content: db.content,
+    category: db.category,
+    created_at: db.created_at
+  };
+}
+
+function mapEquipmentPostToDB(post: Partial<EquipmentPost>): any {
+  const db: any = {};
+  if (post.title !== undefined) db.title = post.title;
+  if (post.content !== undefined) db.content = post.content;
+  if (post.category !== undefined) db.category = post.category;
+  return db;
+}
+
 // Maintenance Logs
 export const maintenanceLogsService = {
   async getAll(): Promise<MaintenanceLog[]> {
@@ -1105,6 +1268,18 @@ export const maintenanceLogsService = {
 
     if (error) {
       console.error('Error deleting maintenance log:', error);
+      throw error;
+    }
+  }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('maintenance_logs')
+      .delete()
+      .neq('id', '');
+
+    if (error) {
+      console.error('Error clearing maintenance logs:', error);
       throw error;
     }
   }
@@ -1187,6 +1362,18 @@ export const expensesService = {
     
     if (error) {
       console.error('Error deleting expense:', error);
+      throw error;
+    }
+  }
+  ,
+  async clearAll(): Promise<void> {
+    const { error } = await requireSupabase()
+      .from('expenses')
+      .delete()
+      .neq('id', '');
+    
+    if (error) {
+      console.error('Error clearing expenses:', error);
       throw error;
     }
   }

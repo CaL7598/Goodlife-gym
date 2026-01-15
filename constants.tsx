@@ -16,7 +16,9 @@ import {
   LogIn,
   Dumbbell,
   Wrench,
-  DollarSign
+  DollarSign,
+  FileText,
+  Trash2
 } from 'lucide-react';
 import { UserRole } from './types';
 
@@ -39,7 +41,9 @@ export const NAVIGATION_ITEMS = [
   { id: 'staff', label: 'Staff', icon: <UserCircle size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'content', label: 'Website CMS', icon: <ImageIcon size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'equipment-manager', label: 'Equipment', icon: <Dumbbell size={20} />, roles: [UserRole.SUPER_ADMIN] },
+  { id: 'equipment-posts', label: 'Equipment Posts', icon: <FileText size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'maintenance-logbook', label: 'Maintenance', icon: <Wrench size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
+  { id: 'data-cleanup', label: 'Data Cleanup', icon: <Trash2 size={20} />, roles: [UserRole.SUPER_ADMIN] },
   { id: 'settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.SUPER_ADMIN] },
 ];
 

@@ -28,7 +28,7 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
 
   const [newEquipment, setNewEquipment] = useState<Partial<GymEquipment>>({
     name: '',
-    state: 'new',
+    state: 'old',
     condition: 'non-faulty'
   });
 
@@ -87,7 +87,7 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
       // Reset form
       setNewEquipment({
         name: '',
-        state: 'new',
+        state: 'old',
         condition: 'non-faulty'
       });
       setShowAddModal(false);
@@ -353,13 +353,13 @@ const EquipmentManager: React.FC<EquipmentManagerProps> = ({ role, logActivity }
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">State *</label>
                 <select
-                  value={newEquipment.state || 'new'}
+                  value={newEquipment.state || 'old'}
                   onChange={(e) => setNewEquipment({...newEquipment, state: e.target.value as 'old' | 'new'})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500"
                   required
                 >
-                  <option value="new">New</option>
                   <option value="old">Old</option>
+                  <option value="new">New</option>
                 </select>
               </div>
               <div>

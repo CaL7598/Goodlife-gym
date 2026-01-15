@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ShoppingCart, 
   Wrench, 
@@ -15,6 +15,8 @@ import {
   TrendingUp,
   Zap
 } from 'lucide-react';
+import { EquipmentPost } from '../types';
+import { equipmentPostsService } from '../lib/database';
 
 // Import equipment images from Equipment folder
 const equipmentImageModules = import.meta.glob('../Equipment/*.{png,jpg,jpeg}', { eager: true });
@@ -47,6 +49,29 @@ interface RepairService {
 
 const Equipment: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [posts, setPosts] = useState<EquipmentPost[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !supabaseKey) {
+          setPosts([]);
+          return;
+        }
+        const data = await equipmentPostsService.getAll();
+        setPosts(data);
+      } catch (error) {
+        console.error('Error loading equipment posts:', error);
+        setPosts([]);
+      } finally {
+        setIsLoadingPosts(false);
+      }
+    };
+    loadPosts();
+  }, []);
 
   const equipmentCategories = ['all', 'Cardio', 'Strength', 'Free Weights', 'Accessories'];
 
@@ -180,6 +205,9 @@ const Equipment: React.FC = () => {
     ? equipment 
     : equipment.filter(eq => eq.category === selectedCategory);
 
+  const salesPosts = posts.filter(p => p.category === 'sales');
+  const equipmentPosts = posts.filter(p => p.category === 'equipment');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Hero Section */}
@@ -197,14 +225,14 @@ const Equipment: React.FC = () => {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-rose-100 text-rose-600 rounded-full text-sm font-bold mb-6">
               <ShoppingCart className="w-4 h-4" />
-              Equipment & Services
+              Used Equipment & Services
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 mb-6 leading-tight">
-              Premium Gym Equipment
+              Used Gym Equipment
               <span className="block text-rose-600 mt-2">Sales & Repair Services</span>
             </h1>
             <p className="text-lg sm:text-xl text-slate-600 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Transform your fitness space with professional-grade equipment. We offer top-quality gym equipment sales and expert repair services to keep you moving.
+              Transform your fitness space with quality used equipment. All items listed are used (not brand new), and we provide expert repair services to keep you moving.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="#equipment" className="px-8 py-4 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700 transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center gap-2">
@@ -220,16 +248,61 @@ const Equipment: React.FC = () => {
         </div>
       </section>
 
+      {/* Sales & Equipment Posts */}
+      <section className="py-16 bg-gradient-to-br from-slate-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Sales Updates</h2>
+              <p className="text-slate-600 mb-4">Latest used equipment sales announcements.</p>
+              {isLoadingPosts ? (
+                <p className="text-slate-500">Loading updates...</p>
+              ) : salesPosts.length === 0 ? (
+                <p className="text-slate-500">No sales posts yet. Check back soon.</p>
+              ) : (
+                <div className="space-y-4">
+                  {salesPosts.map(post => (
+                    <div key={post.id} className="border border-slate-100 rounded-lg p-4">
+                      <h3 className="font-semibold text-slate-900">{post.title}</h3>
+                      <p className="text-sm text-slate-600 mt-1">{post.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Equipment Updates</h2>
+              <p className="text-slate-600 mb-4">Updates on used equipment availability and condition.</p>
+              {isLoadingPosts ? (
+                <p className="text-slate-500">Loading updates...</p>
+              ) : equipmentPosts.length === 0 ? (
+                <p className="text-slate-500">No equipment posts yet. Check back soon.</p>
+              ) : (
+                <div className="space-y-4">
+                  {equipmentPosts.map(post => (
+                    <div key={post.id} className="border border-slate-100 rounded-lg p-4">
+                      <h3 className="font-semibold text-slate-900">{post.title}</h3>
+                      <p className="text-sm text-slate-600 mt-1">{post.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Equipment Sales Section */}
       <section id="equipment" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-4">
-              Our <span className="text-rose-600">Equipment</span>
+              Our <span className="text-rose-600">Used Equipment</span>
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Premium quality gym equipment for home and commercial use
+              Quality used gym equipment for home and commercial use
             </p>
+            <p className="text-sm text-slate-500 mt-2">All items listed are used (not brand new).</p>
           </div>
 
           {/* Category Filter */}
@@ -264,6 +337,9 @@ const Equipment: React.FC = () => {
                   />
                   <div className="absolute top-4 right-4 bg-rose-600 text-white px-3 py-1 rounded-full text-sm font-bold">
                     {item.category}
+                  </div>
+                  <div className="absolute top-4 left-4 bg-slate-900 text-white px-3 py-1 rounded-full text-xs font-bold">
+                    Used
                   </div>
                 </div>
                 <div className="p-6">

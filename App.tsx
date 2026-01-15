@@ -64,10 +64,12 @@ import AttendanceManager from './pages/AttendanceManager';
 import PrivilegeManager from './pages/PrivilegeManager';
 import StaffManager from './pages/StaffManager';
 import EquipmentManager from './pages/EquipmentManager';
+import EquipmentPostsManager from './pages/EquipmentPostsManager';
 import CheckIn from './pages/CheckIn';
 import CheckInManager from './pages/CheckInManager';
 import MaintenanceLogbook from './pages/MaintenanceLogbook';
 import ExpensesManager from './pages/ExpensesManager';
+import DataCleanup from './pages/DataCleanup';
 
 const App: React.FC = () => {
   // Initialize state from localStorage if available
@@ -469,10 +471,26 @@ const App: React.FC = () => {
           role={userRole}
           logActivity={logActivity}
         />;
+        case 'equipment-posts': return <EquipmentPostsManager
+          role={userRole}
+          logActivity={logActivity}
+        />;
         case 'maintenance-logbook': return <MaintenanceLogbook 
           role={userRole}
           userEmail={userEmail}
           staff={staff}
+          logActivity={logActivity}
+        />;
+        case 'data-cleanup': return <DataCleanup
+          role={userRole}
+          setActivityLogs={setActivityLogs}
+          setAttendanceRecords={setAttendanceRecords}
+          setPayments={setPayments}
+          setClientCheckIns={setClientCheckIns}
+          setExpenses={setExpenses}
+          setMaintenanceLogs={setMaintenanceLogs}
+          setAnnouncements={setAnnouncements}
+          setGallery={setGallery}
           logActivity={logActivity}
         />;
         case 'staff': return <StaffManager 

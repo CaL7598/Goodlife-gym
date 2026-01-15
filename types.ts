@@ -160,6 +160,14 @@ export interface GymEquipment {
   updated_at?: string;
 }
 
+export interface EquipmentPost {
+  id: string;
+  title: string;
+  content: string;
+  category: 'sales' | 'equipment';
+  created_at?: string;
+}
+
 export interface MaintenanceLog {
   id: string;
   equipmentName: string;
