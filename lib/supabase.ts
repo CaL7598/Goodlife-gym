@@ -32,23 +32,26 @@ let supabase: SupabaseClient | null = null;
 if (supabaseUrl && supabaseAnonKey) {
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  db: {
-    schema: 'public',
-  },
-  global: {
-    headers: {
-      'x-client-info': 'goodlife-fitness-gym@1.0.0',
-    },
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      db: {
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          'x-client-info': 'goodlife-fitness-gym@1.0.0',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+        },
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
     });
     console.log('✅ Supabase client initialized successfully');
   } catch (error) {
