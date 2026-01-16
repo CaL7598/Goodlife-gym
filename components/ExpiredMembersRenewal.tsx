@@ -241,7 +241,10 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-slate-900 truncate">{member.fullName}</p>
                 <p className="text-xs text-slate-500 truncate">{member.email}</p>
-                <p className="text-xs text-amber-600 mt-1">
+                <p className="text-xs text-slate-600 mt-1">
+                  Registered: {new Date(member.startDate).toLocaleDateString()}
+                </p>
+                <p className="text-xs text-amber-600">
                   Expired: {new Date(member.expiryDate).toLocaleDateString()} ({member.plan})
                 </p>
               </div>
@@ -304,6 +307,9 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                 </div>
                 <div className="pt-3 border-t border-amber-200">
                   <p className="text-xs text-amber-700">
+                    <strong>Registration Date:</strong> {new Date(renewingMember.startDate).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
                     <strong>Previous Plan:</strong> {renewingMember.plan}
                   </p>
                   <p className="text-xs text-amber-700 mt-1">
