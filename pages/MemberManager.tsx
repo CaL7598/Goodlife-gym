@@ -41,18 +41,20 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     status: 'active'
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [registrationFee, setRegistrationFee] = useState<number>(0);
 
   // Clear form fields on component mount (page refresh)
   useEffect(() => {
     setSearchTerm('');
     setBulkData('');
-    setNewMember({
-      fullName: '',
-      email: '',
-      phone: '',
-      plan: SubscriptionPlan.MONTHLY,
-      status: 'active'
-    });
+              setNewMember({
+                fullName: '',
+                email: '',
+                phone: '',
+                plan: SubscriptionPlan.MONTHLY,
+                status: 'active'
+              });
+              setRegistrationFee(0);
     setPhotoPreview(null);
   }, []);
 
@@ -703,13 +705,14 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
               <button onClick={() => {
                 setShowAddModal(false);
                 setPhotoPreview(null);
-                setNewMember({
-                  fullName: '',
-                  email: '',
-                  phone: '',
-                  plan: SubscriptionPlan.MONTHLY,
-                  status: 'active'
-                });
+              setNewMember({
+                fullName: '',
+                email: '',
+                phone: '',
+                plan: SubscriptionPlan.MONTHLY,
+                status: 'active'
+              });
+              setRegistrationFee(0);
               }} className="text-slate-400 hover:text-slate-600">
                 <X size={20} />
               </button>
@@ -805,6 +808,61 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     <option value={SubscriptionPlan.DAY_EVENING}>Day Evening (₵25)</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Registration Fee (GHS)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                    value={registrationFee}
+                    onChange={e => setRegistrationFee(parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                {/* Payment Summary */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-semibold text-slate-900 mb-2">Payment Summary</p>
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>Plan Price:</span>
+                    <span className="font-medium">
+                      {(() => {
+                        switch (newMember.plan) {
+                          case SubscriptionPlan.MONTHLY: return '₵140.00';
+                          case SubscriptionPlan.TWO_WEEKS: return '₵100.00';
+                          case SubscriptionPlan.ONE_WEEK: return '₵70.00';
+                          case SubscriptionPlan.DAY_MORNING:
+                          case SubscriptionPlan.DAY_EVENING: return '₵25.00';
+                          default: return '₵0.00';
+                        }
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>Registration Fee:</span>
+                    <span className="font-medium">₵{registrationFee.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t border-slate-300 pt-2 mt-2">
+                    <div className="flex justify-between text-base font-bold text-slate-900">
+                      <span>Total Amount:</span>
+                      <span className="text-rose-600">
+                        {(() => {
+                          let planPrice = 0;
+                          switch (newMember.plan) {
+                            case SubscriptionPlan.MONTHLY: planPrice = 140; break;
+                            case SubscriptionPlan.TWO_WEEKS: planPrice = 100; break;
+                            case SubscriptionPlan.ONE_WEEK: planPrice = 70; break;
+                            case SubscriptionPlan.DAY_MORNING:
+                            case SubscriptionPlan.DAY_EVENING: planPrice = 25; break;
+                            default: planPrice = 0;
+                          }
+                          return `₵${(planPrice + registrationFee).toFixed(2)}`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
               </div>
 
@@ -816,13 +874,14 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     onClick={() => {
                       setShowAddModal(false);
                       setPhotoPreview(null);
-                      setNewMember({
-                        fullName: '',
-                        email: '',
-                        phone: '',
-                        plan: SubscriptionPlan.MONTHLY,
-                        status: 'active'
-                      });
+              setNewMember({
+                fullName: '',
+                email: '',
+                phone: '',
+                plan: SubscriptionPlan.MONTHLY,
+                status: 'active'
+              });
+              setRegistrationFee(0);
                     }}
                     className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200 transition-colors text-sm"
                   >
