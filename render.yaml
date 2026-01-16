@@ -2,7 +2,7 @@ services:
   - type: web
     name: goodlife-backend-api
     env: node
-    buildCommand: npm ci --only=production
+    buildCommand: bash render-build.sh
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
@@ -10,6 +10,8 @@ services:
       - key: PORT
         value: 10000
       - key: NPM_CONFIG_PRODUCTION
+        value: "true"
+      - key: SKIP_BUILD
         value: "true"
       # Add these environment variables in Render dashboard:
       # RESEND_API_KEY
