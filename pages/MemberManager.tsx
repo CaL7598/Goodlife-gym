@@ -799,7 +799,14 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   <select 
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
                     value={newMember.plan}
-                    onChange={e => setNewMember({...newMember, plan: e.target.value as SubscriptionPlan})}
+                    onChange={e => {
+                      const newPlan = e.target.value as SubscriptionPlan;
+                      setNewMember({...newMember, plan: newPlan});
+                      // Reset registration fee when switching to day passes
+                      if (newPlan === SubscriptionPlan.DAY_MORNING || newPlan === SubscriptionPlan.DAY_EVENING) {
+                        setRegistrationFee(0);
+                      }
+                    }}
                   >
                     <option value={SubscriptionPlan.MONTHLY}>Monthly (₵140/mo)</option>
                     <option value={SubscriptionPlan.TWO_WEEKS}>2 Weeks (₵100)</option>
@@ -808,18 +815,23 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     <option value={SubscriptionPlan.DAY_EVENING}>Day Evening (₵25)</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Registration Fee (GHS)</label>
-                  <input 
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                    value={registrationFee}
-                    onChange={e => setRegistrationFee(parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
-                </div>
+                {/* Registration Fee - Only for Monthly, 2 Weeks, and 1 Week plans */}
+                {(newMember.plan === SubscriptionPlan.MONTHLY || 
+                  newMember.plan === SubscriptionPlan.TWO_WEEKS || 
+                  newMember.plan === SubscriptionPlan.ONE_WEEK) && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Registration Fee (GHS)</label>
+                    <input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                      value={registrationFee}
+                      onChange={e => setRegistrationFee(parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
                 
                 {/* Payment Summary */}
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
@@ -839,10 +851,15 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                       })()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm text-slate-600">
-                    <span>Registration Fee:</span>
-                    <span className="font-medium">₵{registrationFee.toFixed(2)}</span>
-                  </div>
+                  {/* Only show registration fee for non-day passes */}
+                  {(newMember.plan === SubscriptionPlan.MONTHLY || 
+                    newMember.plan === SubscriptionPlan.TWO_WEEKS || 
+                    newMember.plan === SubscriptionPlan.ONE_WEEK) && (
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>Registration Fee:</span>
+                      <span className="font-medium">₵{registrationFee.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="border-t border-slate-300 pt-2 mt-2">
                     <div className="flex justify-between text-base font-bold text-slate-900">
                       <span>Total Amount:</span>
@@ -857,7 +874,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                             case SubscriptionPlan.DAY_EVENING: planPrice = 25; break;
                             default: planPrice = 0;
                           }
-                          return `₵${(planPrice + registrationFee).toFixed(2)}`;
+                          // Registration fee only applies to Monthly, 2 Weeks, and 1 Week plans
+                          const isDayPass = newMember.plan === SubscriptionPlan.DAY_MORNING || 
+                                          newMember.plan === SubscriptionPlan.DAY_EVENING;
+                          const totalAmount = isDayPass ? planPrice : planPrice + registrationFee;
+                          return `₵${totalAmount.toFixed(2)}`;
                         })()}
                       </span>
                     </div>
