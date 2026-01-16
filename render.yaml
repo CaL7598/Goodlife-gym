@@ -2,7 +2,7 @@ services:
   - type: web
     name: goodlife-backend-api
     env: node
-    buildCommand: npm install --production
+    buildCommand: npm install && npm run build:backend
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
