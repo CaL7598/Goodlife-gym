@@ -14,7 +14,7 @@ export function getLocalDateString(date: Date = new Date()): string {
  * Calculates the expiry date based on the subscription plan and start date
  * @param plan - The subscription plan
  * @param startDate - The start date (Date object or ISO string)
- * @returns The expiry date as an ISO string (YYYY-MM-DD)
+ * @returns The expiry date as an ISO string (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:mm:ss) for day passes
  */
 export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | string = new Date()): string {
   // Debug logging
@@ -122,3 +122,61 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
   }
 }
 
+/**
+ * Calculates member status based on expiry date and plan
+ * @param expiryDate - The expiry date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+ * @param plan - The subscription plan (to determine if it's a day pass)
+ * @returns 'active' | 'expiring' | 'expired'
+ */
+export function calculateMemberStatus(expiryDate: string, plan: SubscriptionPlan): 'active' | 'expiring' | 'expired' {
+  if (!expiryDate) return 'active';
+  
+  const now = new Date();
+  let expiry: Date;
+  
+  // Parse expiry date - handle both date-only and datetime formats
+  if (expiryDate.includes('T')) {
+    // Datetime format (day passes)
+    expiry = new Date(expiryDate);
+  } else {
+    // Date-only format - set to end of day (23:59:59) for comparison
+    const dateParts = expiryDate.split('-');
+    if (dateParts.length === 3) {
+      expiry = new Date(
+        parseInt(dateParts[0]),
+        parseInt(dateParts[1]) - 1,
+        parseInt(dateParts[2]),
+        23, 59, 59, 999 // End of day
+      );
+    } else {
+      expiry = new Date(expiryDate);
+    }
+  }
+  
+  // Check if expired
+  if (expiry < now) {
+    return 'expired';
+  }
+  
+  // Check if expiring soon
+  // For day passes: expiring if within 1 hour
+  // For other plans: expiring if within 7 days
+  const timeUntilExpiry = expiry.getTime() - now.getTime();
+  const isDayPass = plan === SubscriptionPlan.DAY_MORNING || plan === SubscriptionPlan.DAY_EVENING;
+  
+  if (isDayPass) {
+    // Day pass: expiring if within 1 hour
+    const oneHourMs = 60 * 60 * 1000;
+    if (timeUntilExpiry <= oneHourMs) {
+      return 'expiring';
+    }
+  } else {
+    // Regular plans: expiring if within 7 days
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    if (timeUntilExpiry <= sevenDaysMs) {
+      return 'expiring';
+    }
+  }
+  
+  return 'active';
+}

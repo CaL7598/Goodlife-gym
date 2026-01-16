@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { calculateMemberStatus } from './dateUtils';
 import { 
   Member, 
   StaffMember, 
@@ -981,6 +982,13 @@ export const equipmentPostsService = {
 
 // Mapper functions to convert between DB format and app format
 function mapMemberFromDB(db: any): Member {
+  const plan = db.plan as SubscriptionPlan;
+  const expiryDate = db.expiry_date;
+  
+  // Automatically calculate status based on expiry date
+  // This ensures status is always accurate even if not manually updated
+  const calculatedStatus = calculateMemberStatus(expiryDate, plan);
+  
   return {
     id: db.id,
     fullName: db.full_name,
@@ -988,10 +996,10 @@ function mapMemberFromDB(db: any): Member {
     phone: db.phone,
     address: db.address,
     emergencyContact: db.emergency_contact,
-    plan: db.plan as SubscriptionPlan,
+    plan: plan,
     startDate: db.start_date,
-    expiryDate: db.expiry_date,
-    status: db.status,
+    expiryDate: expiryDate,
+    status: calculatedStatus, // Use calculated status instead of stored status
     photo: db.photo
   };
 }
