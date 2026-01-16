@@ -64,10 +64,15 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
       break;
     
     case SubscriptionPlan.DAY_MORNING:
+      // Morning pass: expires at 11:00 AM on the same day
+      expiry.setHours(11, 0, 0, 0);
+      console.log('[calculateExpiryDate] Plan: DAY_MORNING - Expires at 11:00 AM same day');
+      break;
+    
     case SubscriptionPlan.DAY_EVENING:
-      // Add 1 day
-      expiry.setDate(expiry.getDate() + 1);
-      console.log('[calculateExpiryDate] Plan: DAY - Added 1 day');
+      // Evening pass: expires at 8:00 PM (20:00) on the same day
+      expiry.setHours(20, 0, 0, 0);
+      console.log('[calculateExpiryDate] Plan: DAY_EVENING - Expires at 8:00 PM same day');
       break;
     
     // Legacy plans
@@ -91,15 +96,29 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
       break;
   }
 
-  console.log('[calculateExpiryDate] After calculation:', expiry.toLocaleDateString());
+  console.log('[calculateExpiryDate] After calculation:', expiry.toLocaleDateString(), expiry.toLocaleTimeString());
 
-  // Format as YYYY-MM-DD in local timezone to avoid timezone conversion issues
-  const year = expiry.getFullYear();
-  const month = String(expiry.getMonth() + 1).padStart(2, '0');
-  const day = String(expiry.getDate()).padStart(2, '0');
-  const result = `${year}-${month}-${day}`;
-  
-  console.log('[calculateExpiryDate] Final result:', result);
-  return result;
+  // For day passes (DAY_MORNING, DAY_EVENING), return ISO datetime string with time
+  // For other plans, return date string (YYYY-MM-DD) only
+  if (plan === SubscriptionPlan.DAY_MORNING || plan === SubscriptionPlan.DAY_EVENING) {
+    // Return ISO datetime string with time for day passes
+    const year = expiry.getFullYear();
+    const month = String(expiry.getMonth() + 1).padStart(2, '0');
+    const day = String(expiry.getDate()).padStart(2, '0');
+    const hours = String(expiry.getHours()).padStart(2, '0');
+    const minutes = String(expiry.getMinutes()).padStart(2, '0');
+    const seconds = String(expiry.getSeconds()).padStart(2, '0');
+    const result = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    console.log('[calculateExpiryDate] Final result (datetime):', result);
+    return result;
+  } else {
+    // Format as YYYY-MM-DD in local timezone for date-only plans
+    const year = expiry.getFullYear();
+    const month = String(expiry.getMonth() + 1).padStart(2, '0');
+    const day = String(expiry.getDate()).padStart(2, '0');
+    const result = `${year}-${month}-${day}`;
+    console.log('[calculateExpiryDate] Final result (date):', result);
+    return result;
+  }
 }
 
