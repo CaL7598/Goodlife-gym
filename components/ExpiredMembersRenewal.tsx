@@ -201,70 +201,72 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
 
   // Always show the section, even if no expired members (shows empty state)
   return (
-    <div className="bg-gradient-to-r from-rose-50 to-amber-50 rounded-xl shadow-lg border-2 border-rose-200 p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-            <RefreshCw size={22} className="text-rose-600" />
-            Expired Members - Quick Renewal
+    <div className="bg-gradient-to-br from-rose-50 via-amber-50 to-rose-50 rounded-xl shadow-lg border-2 border-rose-300 p-4">
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <RefreshCw size={18} className="text-rose-600" />
+            Expired Members
           </h3>
-          <p className="text-sm text-slate-600 mt-1">
-            {expiredMembers.length > 0 
-              ? `${expiredMembers.length} member${expiredMembers.length > 1 ? 's' : ''} with expired subscription${expiredMembers.length > 1 ? 's' : ''}`
-              : 'No expired members - All subscriptions are active'
-            }
-          </p>
+          {expiredMembers.length > 0 && (
+            <div className="bg-rose-500 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
+              {expiredMembers.length}
+            </div>
+          )}
         </div>
-        {expiredMembers.length > 0 && (
-          <div className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-            {expiredMembers.length} Expired
-          </div>
-        )}
+        <p className="text-xs text-slate-600">
+          {expiredMembers.length > 0 
+            ? `${expiredMembers.length} member${expiredMembers.length > 1 ? 's' : ''} need renewal`
+            : 'All active ✓'
+          }
+        </p>
       </div>
 
       {expiredMembers.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-3">
-            <RefreshCw size={32} className="text-emerald-600" />
+        <div className="text-center py-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-2">
+            <RefreshCw size={24} className="text-emerald-600" />
           </div>
-          <p className="text-slate-600 font-medium">All memberships are active! 🎉</p>
-          <p className="text-xs text-slate-500 mt-1">No renewals needed at this time.</p>
+          <p className="text-sm text-slate-700 font-medium">All Active! 🎉</p>
+          <p className="text-xs text-slate-500 mt-1">No renewals needed</p>
         </div>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
         {expiredMembers.map((member) => (
           <div
             key={member.id}
-            className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg hover:border-amber-300 transition-colors"
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-white border border-rose-200 rounded-lg hover:border-rose-400 hover:shadow-md transition-all"
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0 w-full sm:w-auto">
               {member.photo ? (
                 <img
                   src={member.photo}
                   alt={member.fullName}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-amber-200"
+                  className="w-8 h-8 rounded-full object-cover border-2 border-rose-200 shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold">
+                <div className="w-8 h-8 rounded-full bg-rose-200 flex items-center justify-center text-rose-700 font-bold text-xs shrink-0">
                   {member.fullName.split(' ').map(n => n[0]).join('')}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-900 truncate">{member.fullName}</p>
-                <p className="text-xs text-slate-500 truncate">{member.email}</p>
-                <p className="text-xs text-slate-600 mt-1">
-                  Registered: {new Date(member.startDate).toLocaleDateString()}
-                </p>
-                <p className="text-xs text-amber-600">
-                  Expired: {new Date(member.expiryDate).toLocaleDateString()} ({member.plan})
-                </p>
+                <p className="font-semibold text-sm text-slate-900 truncate">{member.fullName}</p>
+                <p className="text-[10px] text-slate-500 truncate">{member.email}</p>
+                <div className="flex flex-wrap gap-x-2 mt-1">
+                  <p className="text-[10px] text-slate-600">
+                    📅 {new Date(member.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-[10px] text-rose-600 font-medium">
+                    ⏱️ {new Date(member.expiryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({member.plan})
+                  </p>
+                </div>
               </div>
             </div>
             <button
               onClick={() => handleRenewClick(member)}
-              className="ml-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 text-sm font-medium whitespace-nowrap"
+              className="w-full sm:w-auto px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0"
             >
-              <RefreshCw size={16} />
+              <RefreshCw size={14} />
               Renew
             </button>
           </div>
