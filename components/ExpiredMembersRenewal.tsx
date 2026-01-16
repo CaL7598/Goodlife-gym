@@ -199,28 +199,39 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
     }
   };
 
-  if (expiredMembers.length === 0) {
-    return null; // Don't show section if no expired members
-  }
-
+  // Always show the section, even if no expired members (shows empty state)
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+    <div className="bg-gradient-to-r from-rose-50 to-amber-50 rounded-xl shadow-lg border-2 border-rose-200 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <RefreshCw size={20} className="text-amber-600" />
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+            <RefreshCw size={22} className="text-rose-600" />
             Expired Members - Quick Renewal
           </h3>
-          <p className="text-sm text-slate-500 mt-1">
-            {expiredMembers.length} member{expiredMembers.length > 1 ? 's' : ''} with expired subscription{expiredMembers.length > 1 ? 's' : ''}
+          <p className="text-sm text-slate-600 mt-1">
+            {expiredMembers.length > 0 
+              ? `${expiredMembers.length} member${expiredMembers.length > 1 ? 's' : ''} with expired subscription${expiredMembers.length > 1 ? 's' : ''}`
+              : 'No expired members - All subscriptions are active'
+            }
           </p>
         </div>
-        <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">
-          {expiredMembers.length} Expired
-        </div>
+        {expiredMembers.length > 0 && (
+          <div className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+            {expiredMembers.length} Expired
+          </div>
+        )}
       </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      {expiredMembers.length === 0 ? (
+        <div className="text-center py-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-3">
+            <RefreshCw size={32} className="text-emerald-600" />
+          </div>
+          <p className="text-slate-600 font-medium">All memberships are active! 🎉</p>
+          <p className="text-xs text-slate-500 mt-1">No renewals needed at this time.</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-96 overflow-y-auto">
         {expiredMembers.map((member) => (
           <div
             key={member.id}
@@ -258,7 +269,8 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
             </button>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Renewal Modal */}
       {showRenewalModal && renewingMember && (

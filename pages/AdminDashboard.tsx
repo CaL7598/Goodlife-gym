@@ -332,6 +332,18 @@ const AdminDashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Sticky Expired Members Section - Always visible at top */}
+      <div className="sticky top-0 z-40 bg-white pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b border-slate-200 mb-6">
+        <ExpiredMembersRenewal
+          members={members}
+          setMembers={setMembers}
+          setPayments={setPayments}
+          role={role}
+          staffEmail={staffEmail}
+          logActivity={logActivity}
+        />
+      </div>
+
       {/* Pending Payment Notifications */}
       {pendingPayments.length > 0 && (
         <div className={`rounded-xl border-2 p-3 sm:p-4 ${
@@ -374,16 +386,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
-
-      {/* Expired Members Renewal Section */}
-      <ExpiredMembersRenewal
-        members={members}
-        setMembers={setMembers}
-        setPayments={setPayments}
-        role={role}
-        staffEmail={staffEmail}
-        logActivity={logActivity}
-      />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
