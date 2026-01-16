@@ -18,6 +18,7 @@ import {
   Bell,
   UserPlus
 } from 'lucide-react';
+import ExpiredMembersRenewal from '../components/ExpiredMembersRenewal';
 import { 
   BarChart, 
   Bar, 
@@ -38,9 +39,25 @@ interface DashboardProps {
   attendanceRecords: AttendanceRecord[];
   activityLogs: ActivityLog[];
   expenses: Expense[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+  setPayments: React.Dispatch<React.SetStateAction<PaymentRecord[]>>;
+  staffEmail: string;
+  logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void;
 }
 
-const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, staff, attendanceRecords, activityLogs, expenses }) => {
+const AdminDashboard: React.FC<DashboardProps> = ({ 
+  members, 
+  payments, 
+  role, 
+  staff, 
+  attendanceRecords, 
+  activityLogs, 
+  expenses,
+  setMembers,
+  setPayments,
+  staffEmail,
+  logActivity
+}) => {
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [revenuePeriod, setRevenuePeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
@@ -357,6 +374,16 @@ const AdminDashboard: React.FC<DashboardProps> = ({ members, payments, role, sta
           </div>
         </div>
       )}
+
+      {/* Expired Members Renewal Section */}
+      <ExpiredMembersRenewal
+        members={members}
+        setMembers={setMembers}
+        setPayments={setPayments}
+        role={role}
+        staffEmail={staffEmail}
+        logActivity={logActivity}
+      />
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

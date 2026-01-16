@@ -439,14 +439,18 @@ const App: React.FC = () => {
       // Admin Pages
       switch (currentPage) {
         case 'dashboard': return (
-          <AdminDashboard 
-            members={members} 
-            payments={payments} 
-            role={userRole} 
+          <AdminDashboard
+            members={members}
+            payments={payments}
+            role={userRole}
             staff={staff}
             attendanceRecords={attendanceRecords}
             activityLogs={activityLogs}
             expenses={expenses}
+            setMembers={setMembers}
+            setPayments={setPayments}
+            staffEmail={userEmail}
+            logActivity={logActivity}
           />
         );
         case 'members': return <MemberManager members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
@@ -505,7 +509,21 @@ const App: React.FC = () => {
           role={userRole}
           logActivity={logActivity}
         />;
-        default: return <AdminDashboard members={members} payments={payments} role={userRole} staff={staff} attendanceRecords={attendanceRecords} activityLogs={activityLogs} expenses={expenses} />;
+        default: return (
+          <AdminDashboard
+            members={members}
+            payments={payments}
+            role={userRole}
+            staff={staff}
+            attendanceRecords={attendanceRecords}
+            activityLogs={activityLogs}
+            expenses={expenses}
+            setMembers={setMembers}
+            setPayments={setPayments}
+            staffEmail={userEmail}
+            logActivity={logActivity}
+          />
+        );
       }
     }
   };
