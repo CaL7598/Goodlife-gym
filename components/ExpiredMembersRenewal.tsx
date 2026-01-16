@@ -199,80 +199,83 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
     }
   };
 
-  // Always show the section, even if no expired members (shows empty state)
+  // Always show the page, even if no expired members (shows empty state)
   return (
-    <div className="bg-gradient-to-br from-rose-50 via-amber-50 to-rose-50 rounded-xl shadow-lg border-2 border-rose-300 p-4">
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <RefreshCw size={18} className="text-rose-600" />
-            Expired Members
-          </h3>
-          {expiredMembers.length > 0 && (
-            <div className="bg-rose-500 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
-              {expiredMembers.length}
-            </div>
-          )}
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <RefreshCw size={24} className="text-rose-600" />
+            Expired Members - Quick Renewal
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1">
+            {expiredMembers.length > 0 
+              ? `${expiredMembers.length} member${expiredMembers.length > 1 ? 's' : ''} with expired subscription${expiredMembers.length > 1 ? 's' : ''}`
+              : 'All memberships are active'
+            }
+          </p>
         </div>
-        <p className="text-xs text-slate-600">
-          {expiredMembers.length > 0 
-            ? `${expiredMembers.length} member${expiredMembers.length > 1 ? 's' : ''} need renewal`
-            : 'All active ✓'
-          }
-        </p>
+        {expiredMembers.length > 0 && (
+          <div className="bg-rose-100 text-rose-700 px-4 py-2 rounded-full text-sm font-bold animate-pulse">
+            {expiredMembers.length} Expired
+          </div>
+        )}
       </div>
 
-      {expiredMembers.length === 0 ? (
-        <div className="text-center py-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-2">
-            <RefreshCw size={24} className="text-emerald-600" />
-          </div>
-          <p className="text-sm text-slate-700 font-medium">All Active! 🎉</p>
-          <p className="text-xs text-slate-500 mt-1">No renewals needed</p>
-        </div>
-      ) : (
-        <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
-        {expiredMembers.map((member) => (
-          <div
-            key={member.id}
-            className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-white border border-rose-200 rounded-lg hover:border-rose-400 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0 w-full sm:w-auto">
-              {member.photo ? (
-                <img
-                  src={member.photo}
-                  alt={member.fullName}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-rose-200 shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-rose-200 flex items-center justify-center text-rose-700 font-bold text-xs shrink-0">
-                  {member.fullName.split(' ').map(n => n[0]).join('')}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-slate-900 truncate">{member.fullName}</p>
-                <p className="text-[10px] text-slate-500 truncate">{member.email}</p>
-                <div className="flex flex-wrap gap-x-2 mt-1">
-                  <p className="text-[10px] text-slate-600">
-                    📅 {new Date(member.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </p>
-                  <p className="text-[10px] text-rose-600 font-medium">
-                    ⏱️ {new Date(member.expiryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({member.plan})
-                  </p>
-                </div>
-              </div>
+      {/* Main Content Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+
+        {expiredMembers.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-4">
+              <RefreshCw size={40} className="text-emerald-600" />
             </div>
-            <button
-              onClick={() => handleRenewClick(member)}
-              className="w-full sm:w-auto px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0"
-            >
-              <RefreshCw size={14} />
-              Renew
-            </button>
+            <p className="text-lg text-slate-700 font-semibold mb-2">All Memberships Are Active! 🎉</p>
+            <p className="text-sm text-slate-500">No renewals needed at this time.</p>
           </div>
-        ))}
-        </div>
-      )}
+        ) : (
+          <div className="space-y-3">
+            {expiredMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg hover:border-amber-300 hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {member.photo ? (
+                    <img
+                      src={member.photo}
+                      alt={member.fullName}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-amber-200 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold shrink-0">
+                      {member.fullName.split(' ').map(n => n[0]).join('')}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 truncate">{member.fullName}</p>
+                    <p className="text-xs text-slate-500 truncate">{member.email}</p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Registered: {new Date(member.startDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-amber-600 font-medium">
+                      Expired: {new Date(member.expiryDate).toLocaleDateString()} ({member.plan})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRenewClick(member)}
+                  className="ml-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 text-sm font-medium whitespace-nowrap shrink-0"
+                >
+                  <RefreshCw size={16} />
+                  Renew
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Renewal Modal */}
       {showRenewalModal && renewingMember && (

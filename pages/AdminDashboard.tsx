@@ -18,7 +18,6 @@ import {
   Bell,
   UserPlus
 } from 'lucide-react';
-import ExpiredMembersRenewal from '../components/ExpiredMembersRenewal';
 import { 
   BarChart, 
   Bar, 
@@ -331,9 +330,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({
   }, [pendingPayments]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main Content Area - Left Side */}
-      <div className="lg:col-span-2 space-y-6">
+    <div className="space-y-6">
       {/* Pending Payment Notifications */}
       {pendingPayments.length > 0 && (
         <div className={`rounded-xl border-2 p-3 sm:p-4 ${
@@ -710,10 +707,10 @@ const AdminDashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               )}
-            </div>
+        </div>
 
-            {/* AI Insight Sidebar */}
-            <div className="bg-slate-900 text-white p-4 sm:p-6 rounded-xl shadow-lg relative overflow-hidden h-fit">
+        {/* AI Insight Sidebar */}
+        <div className="bg-slate-900 text-white p-4 sm:p-6 rounded-xl shadow-lg relative overflow-hidden h-fit">
               <div className="relative z-10 h-full flex flex-col">
                 <div className="flex items-center gap-2 mb-3 sm:mb-4 text-rose-400">
                   <TrendingUp size={20} className="shrink-0" />
@@ -740,23 +737,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({
                   </button>
                 )}
               </div>
-              {/* Background decoration */}
-              <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl"></div>
-            </div>
-          </div>
-      </div>
-
-      {/* Right Sidebar - Expired Members Panel */}
-      <div className="lg:col-span-1">
-        <div className="sticky top-4">
-          <ExpiredMembersRenewal
-            members={members}
-            setMembers={setMembers}
-            setPayments={setPayments}
-            role={role}
-            staffEmail={staffEmail}
-            logActivity={logActivity}
-          />
+          {/* Background decoration */}
+          <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl"></div>
         </div>
       </div>
     </div>

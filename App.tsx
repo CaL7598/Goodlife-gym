@@ -70,6 +70,7 @@ import CheckInManager from './pages/CheckInManager';
 import MaintenanceLogbook from './pages/MaintenanceLogbook';
 import ExpensesManager from './pages/ExpensesManager';
 import DataCleanup from './pages/DataCleanup';
+import ExpiredMembersRenewal from './components/ExpiredMembersRenewal';
 
 const App: React.FC = () => {
   // Initialize state from localStorage if available
@@ -454,6 +455,16 @@ const App: React.FC = () => {
           />
         );
         case 'members': return <MemberManager members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
+        case 'expired-members': return (
+          <ExpiredMembersRenewal
+            members={members}
+            setMembers={setMembers}
+            setPayments={setPayments}
+            role={userRole}
+            staffEmail={userEmail}
+            logActivity={logActivity}
+          />
+        );
         case 'payments': return <PaymentProcessor payments={payments} setPayments={setPayments} members={members} setMembers={setMembers} role={userRole} userEmail={userEmail} staff={staff} logActivity={logActivity} />;
         case 'expenses': return <ExpensesManager 
           role={userRole}

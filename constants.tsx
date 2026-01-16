@@ -18,7 +18,8 @@ import {
   Wrench,
   DollarSign,
   FileText,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 import { UserRole } from './types';
 
@@ -31,6 +32,7 @@ export const COLORS = {
 export const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'members', label: 'Members', icon: <Users size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
+  { id: 'expired-members', label: 'Expired Members', icon: <RefreshCw size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'subscriptions', label: 'Subscriptions', icon: <Bell size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'payments', label: 'Payments', icon: <CreditCard size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
   { id: 'expenses', label: 'Expenses', icon: <DollarSign size={20} />, roles: [UserRole.STAFF, UserRole.SUPER_ADMIN] },
