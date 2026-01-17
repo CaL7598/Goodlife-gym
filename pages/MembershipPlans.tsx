@@ -17,7 +17,7 @@ const MembershipPlans: React.FC<MembershipPlansProps> = ({ setCurrentPage, selec
   const plans = [
     {
       name: 'Monthly',
-      price: '140',
+      price: '150',
       period: 'Month',
       registrationFee: '100',
       features: ['Full gym access', 'All equipment access', 'Group classes included', 'Locker access'],

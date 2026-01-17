@@ -125,7 +125,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
                 <li className="ml-4">4:00 PM - 8:00 PM</li>
                 <li>Saturday: 5:00 AM - 11:00 AM</li>
                 <li className="ml-4">5:00 PM - 7:30 PM</li>
-                <li className="mt-2 text-rose-400">Aerobics: Mon, Wed, Sat 6:00 PM</li>
+                <li className="mt-2 text-rose-400">Aerobics: Mon, Wed 6:00 PM, Sat 6:00 AM</li>
               </ul>
             </div>
           </div>
