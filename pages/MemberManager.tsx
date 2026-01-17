@@ -223,11 +223,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     
     if (supabaseUrl && supabaseKey) {
       try {
-        // Check if member with this email already exists
-        const existingMember = await membersService.getByEmail(memberData.email);
-        if (existingMember) {
-          showError(`A member with email "${memberData.email}" already exists. Please use a different email address or edit the existing member.`);
-          return;
+        // Check if member with this email already exists (only if email is provided)
+        if (memberData.email && memberData.email.trim()) {
+          const existingMember = await membersService.getByEmail(memberData.email);
+          if (existingMember) {
+            showError(`A member with email "${memberData.email}" already exists. Please use a different email address or edit the existing member.`);
+            return;
+          }
         }
 
         // Save to Supabase database
@@ -237,8 +239,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       } catch (error: any) {
         console.error('❌ Error saving member to Supabase:', error);
         
-        // Check for duplicate email error (PostgreSQL error code 23505)
-        if (error?.code === '23505' || error?.message?.includes('duplicate key') || error?.message?.includes('members_email_key')) {
+        // Check for duplicate email error (PostgreSQL error code 23505) - only if email was provided
+        if ((error?.code === '23505' || error?.message?.includes('duplicate key') || error?.message?.includes('members_email_key')) && memberData.email) {
           showError(`A member with email "${memberData.email}" already exists. Please use a different email address or edit the existing member.`);
           return;
         }
@@ -312,7 +314,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         emergencyContact: row['emergency contact'] || row['emergencycontact'] || undefined
       };
 
-      if (member.fullName && member.email && member.phone) {
+      // Email is optional, only require fullName and phone
+      if (member.fullName && member.phone) {
         data.push(member);
       }
     }
@@ -385,7 +388,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
           const memberToCreate: Omit<Member, 'id'> = {
             fullName: memberData.fullName!,
-            email: memberData.email!,
+            email: memberData.email && memberData.email.trim() ? memberData.email.trim() : undefined,
             phone: memberData.phone!,
             plan: memberData.plan || SubscriptionPlan.BASIC,
             startDate,
@@ -405,8 +408,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
           try {
             createdMember = await membersService.create(memberToCreate);
           } catch (error: any) {
-            // If duplicate email, skip this member
-            if (error?.message?.includes('duplicate') || error?.code === '23505') {
+            // If duplicate email, skip this member (only if email was provided)
+            if ((error?.message?.includes('duplicate') || error?.code === '23505') && memberToCreate.email) {
               errors.push(`${memberData.fullName}: Email already exists`);
               failedCount++;
               continue;
@@ -610,7 +613,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   </td>
                   <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <div className="text-xs lg:text-sm text-slate-600 truncate">{member.phone}</div>
-                    <div className="text-xs text-slate-400 truncate">{member.email}</div>
+                    <div className="text-xs text-slate-400 truncate">{member.email || '-'}</div>
                   </td>
                   <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <div className="text-xs text-slate-600">
@@ -810,13 +813,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                    <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email (Optional)</label>
                     <input 
-                      required 
                       type="email" 
                       className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                      value={newMember.email}
-                      onChange={e => setNewMember({...newMember, email: e.target.value})}
+                      value={newMember.email || ''}
+                      onChange={e => setNewMember({...newMember, email: e.target.value || undefined})}
+                      placeholder="email@example.com"
                     />
                   </div>
                   <div>
@@ -1034,13 +1037,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Email</label>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Email (Optional)</label>
                         <input 
-                          required 
                           type="email" 
                           className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                          value={editingMember.email}
-                          onChange={e => setEditingMember({...editingMember, email: e.target.value})}
+                          value={editingMember.email || ''}
+                          onChange={e => setEditingMember({...editingMember, email: e.target.value || undefined})}
+                          placeholder="email@example.com"
                         />
                       </div>
                       <div>
@@ -1207,7 +1210,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 John Doe,john@example.com,0244123456,Basic,2024-01-01,2024-02-01,active
 Jane Smith,jane@example.com,0244123457,Premium,2024-01-15,2024-02-15,active`}
                     </pre>
-                    <p className="mt-2 text-slate-500">Required fields: Full Name, Email, Phone</p>
+                    <p className="mt-2 text-slate-500">Required fields: Full Name, Phone (Email is optional)</p>
                   </div>
                 ) : (
                   <div className="text-xs text-slate-600 space-y-1">

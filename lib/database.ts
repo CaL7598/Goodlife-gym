@@ -60,11 +60,16 @@ export const membersService = {
     return data ? mapMemberFromDB(data) : null;
   },
 
-  async getByEmail(email: string): Promise<Member | null> {
+  async getByEmail(email: string | undefined): Promise<Member | null> {
+    // Return null if email is not provided or empty
+    if (!email || !email.trim()) {
+      return null;
+    }
+    
     const { data, error } = await requireSupabase()
       .from('members')
       .select('*')
-      .eq('email', email)
+      .eq('email', email.trim())
       .single();
     
     if (error) {
@@ -1008,7 +1013,10 @@ function mapMemberFromDB(db: any): Member {
 function mapMemberToDB(member: Partial<Member>): any {
   const db: any = {};
   if (member.fullName !== undefined) db.full_name = member.fullName;
-  if (member.email !== undefined) db.email = member.email;
+  // Only include email if it's provided and not empty
+  if (member.email !== undefined) {
+    db.email = member.email && member.email.trim() ? member.email.trim() : null;
+  }
   if (member.phone !== undefined) db.phone = member.phone;
   if (member.address !== undefined) db.address = member.address;
   if (member.emergencyContact !== undefined) db.emergency_contact = member.emergencyContact;

@@ -54,7 +54,7 @@ export enum PaymentStatus {
 export interface Member {
   id: string;
   fullName: string;
-  email: string;
+  email?: string; // Optional - members can be registered without email
   phone: string;
   address?: string;
   emergencyContact?: string;

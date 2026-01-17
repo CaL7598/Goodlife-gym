@@ -93,8 +93,8 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
 
   const handleMemberSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberData.fullName || !memberData.email || !memberData.phone) {
-      setError('Please fill in all required fields');
+    if (!memberData.fullName || !memberData.phone) {
+      setError('Please fill in all required fields (Full Name and Phone)');
       return;
     }
     if (!memberData.photo) {
@@ -332,14 +332,13 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Email <span className="text-rose-600">*</span>
+                        Email (Optional)
                       </label>
                       <input
-                        required
                         type="email"
                         className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
-                        value={memberData.email}
-                        onChange={e => setMemberData({...memberData, email: e.target.value})}
+                        value={memberData.email || ''}
+                        onChange={e => setMemberData({...memberData, email: e.target.value || undefined})}
                         placeholder="john@example.com"
                       />
                     </div>
