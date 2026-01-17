@@ -570,6 +570,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                 <th className="px-4 lg:px-6 py-3 lg:py-4">Subscription</th>
                 <th className="px-4 lg:px-6 py-3 lg:py-4">Status</th>
                 <th className="px-4 lg:px-6 py-3 lg:py-4">Contact</th>
+                <th className="px-4 lg:px-6 py-3 lg:py-4">Date Added</th>
                 <th className="px-4 lg:px-6 py-3 lg:py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -610,6 +611,23 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <div className="text-xs lg:text-sm text-slate-600 truncate">{member.phone}</div>
                     <div className="text-xs text-slate-400 truncate">{member.email}</div>
+                  </td>
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
+                    <div className="text-xs text-slate-600">
+                      {member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      }) : '-'}
+                    </div>
+                    {member.createdAt && (
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {new Date(member.createdAt).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 lg:px-6 py-3 lg:py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -691,6 +709,24 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                 <div className="text-sm text-slate-600">{member.phone}</div>
                 <div className="text-xs text-slate-400 truncate">{member.email}</div>
               </div>
+              {member.createdAt && (
+                <div className="pt-3 border-t border-slate-100">
+                  <div className="text-xs text-slate-500 mb-1">Date Added</div>
+                  <div className="text-xs text-slate-600">
+                    {new Date(member.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {new Date(member.createdAt).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -1000,7 +1000,8 @@ function mapMemberFromDB(db: any): Member {
     startDate: db.start_date,
     expiryDate: expiryDate,
     status: calculatedStatus, // Use calculated status instead of stored status
-    photo: db.photo
+    photo: db.photo,
+    createdAt: db.created_at // Date when member was added to the system
   };
 }
 

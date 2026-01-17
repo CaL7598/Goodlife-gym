@@ -63,6 +63,7 @@ export interface Member {
   expiryDate: string;
   status: 'active' | 'expiring' | 'expired';
   photo?: string; // Base64 encoded image or URL
+  createdAt?: string; // Date when member was added to the system
 }
 
 export interface PasswordHistoryEntry {
