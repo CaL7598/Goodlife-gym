@@ -188,7 +188,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
   const filteredMembers = members.filter(m => 
     m.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (m.email && m.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     m.phone.includes(searchTerm)
   );
 
@@ -339,7 +339,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         status: item.status || 'active',
         address: item.address || undefined,
         emergencyContact: item.emergencyContact || item.emergency_contact || undefined
-      })).filter((m: Partial<Member>) => m.fullName && m.email && m.phone);
+      })).filter((m: Partial<Member>) => m.fullName && m.phone); // Email is optional
     } catch (error) {
       throw new Error('Invalid JSON format');
     }
