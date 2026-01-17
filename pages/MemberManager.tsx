@@ -880,7 +880,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     <span className="font-medium">
                       {(() => {
                         switch (newMember.plan) {
-                          case SubscriptionPlan.MONTHLY: return '₵150.00';
+                          case SubscriptionPlan.MONTHLY: return '₵140.00';
                           case SubscriptionPlan.TWO_WEEKS: return '₵100.00';
                           case SubscriptionPlan.ONE_WEEK: return '₵70.00';
                           case SubscriptionPlan.DAY_MORNING:
@@ -1082,7 +1082,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                         value={editingMember.plan}
                         onChange={e => setEditingMember({...editingMember, plan: e.target.value as SubscriptionPlan})}
                       >
-                        <option value={SubscriptionPlan.MONTHLY}>Monthly (₵150/mo)</option>
+                        <option value={SubscriptionPlan.MONTHLY}>Monthly (₵140/mo)</option>
                         <option value={SubscriptionPlan.TWO_WEEKS}>2 Weeks (₵100)</option>
                         <option value={SubscriptionPlan.ONE_WEEK}>1 Week (₵70)</option>
                         <option value={SubscriptionPlan.DAY_MORNING}>Day Morning (₵25)</option>

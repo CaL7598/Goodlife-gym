@@ -55,7 +55,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
     let amount = 0;
     switch (plan) {
       case SubscriptionPlan.MONTHLY:
-        amount = 150;
+        amount = 140;
         break;
       case SubscriptionPlan.TWO_WEEKS:
         amount = 90;
@@ -347,7 +347,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                   disabled={isProcessing}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-slate-100"
                 >
-                  <option value={SubscriptionPlan.MONTHLY}>Monthly - ₵150</option>
+                  <option value={SubscriptionPlan.MONTHLY}>Monthly - ₵140</option>
                   <option value={SubscriptionPlan.TWO_WEEKS}>2 Weeks - ₵90</option>
                   <option value={SubscriptionPlan.ONE_WEEK}>1 Week - ₵50</option>
                   <option value={SubscriptionPlan.DAY_MORNING}>Day Morning - ₵10</option>
