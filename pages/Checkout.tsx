@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SubscriptionPlan, PaymentMethod, PaymentStatus } from '../types';
 import { ArrowLeft, CreditCard, Smartphone, X, CheckCircle2, AlertCircle, Copy, Check, Image as ImageIcon, User } from 'lucide-react';
 import { paymentsService } from '../lib/database';
-import { MOBILE_MONEY_NUMBER } from '../constants';
+import { MOBILE_MONEY_NUMBER, MOBILE_MONEY_NAME } from '../constants';
 import { calculateExpiryDate } from '../lib/dateUtils';
 
 interface CheckoutProps {
@@ -424,20 +424,23 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                     <div className="text-center">
                       <Smartphone className="mx-auto text-rose-600 mb-4" size={48} />
                       <h3 className="text-lg font-bold text-slate-900 mb-2">Send Payment To:</h3>
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <span className="text-3xl font-extrabold text-rose-600">{MOBILE_MONEY_NUMBER}</span>
-                        <button
-                          type="button"
-                          onClick={handleCopyNumber}
-                          className="p-2 bg-white rounded-lg hover:bg-slate-50 transition-colors border border-slate-200"
-                          title="Copy number"
-                        >
-                          {copied ? (
-                            <Check className="text-emerald-600" size={20} />
-                          ) : (
-                            <Copy className="text-slate-600" size={20} />
-                          )}
-                        </button>
+                      <div className="mb-3">
+                        <div className="text-xl font-bold text-slate-900 mb-1">{MOBILE_MONEY_NAME}</div>
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="text-3xl font-extrabold text-rose-600">{MOBILE_MONEY_NUMBER}</span>
+                          <button
+                            type="button"
+                            onClick={handleCopyNumber}
+                            className="p-2 bg-white rounded-lg hover:bg-slate-50 transition-colors border border-slate-200"
+                            title="Copy number"
+                          >
+                            {copied ? (
+                              <Check className="text-emerald-600" size={20} />
+                            ) : (
+                              <Copy className="text-slate-600" size={20} />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <p className="text-sm text-slate-600">
                         Use any Mobile Money network (MTN, Vodafone, Telecel, AirtelTigo)
@@ -450,7 +453,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                     <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
                       <li>Dial <strong>*170#</strong> on your phone</li>
                       <li>Select <strong>"Send Money"</strong> or <strong>"Transfer"</strong></li>
-                      <li>Enter the number: <strong>{MOBILE_MONEY_NUMBER}</strong></li>
+                      <li>Enter the number: <strong>{MOBILE_MONEY_NUMBER}</strong> (<strong>{MOBILE_MONEY_NAME}</strong>)</li>
                       <li>Enter the amount: <strong>₵{totalAmount}</strong> (Plan: ₵{selectedPlan.price}{registrationFee > 0 ? ` + Registration: ₵${registrationFee}` : ''})</li>
                       <li>Enter your Mobile Money PIN</li>
                       <li>Confirm the transaction</li>
@@ -508,7 +511,7 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
                     </div>
                     <div className="flex justify-between items-center mt-2 text-sm">
                       <span className="text-slate-600">To:</span>
-                      <span className="font-semibold text-slate-900">{MOBILE_MONEY_NUMBER}</span>
+                      <span className="font-semibold text-slate-900">{MOBILE_MONEY_NUMBER} ({MOBILE_MONEY_NAME})</span>
                     </div>
                   </div>
 

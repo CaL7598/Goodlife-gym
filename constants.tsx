@@ -77,4 +77,5 @@ export const INITIAL_GALLERY = [
 ];
 
 // Mobile Money Payment Configuration
-export const MOBILE_MONEY_NUMBER = '0551336976'; // Main mobile money number for payments
+export const MOBILE_MONEY_NUMBER = '0546153765'; // Main mobile money number for payments
+export const MOBILE_MONEY_NAME = 'Stella Agyeiwaa'; // Name associated with the mobile money number
