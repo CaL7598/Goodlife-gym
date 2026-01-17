@@ -906,7 +906,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                         {(() => {
                           let planPrice = 0;
                           switch (newMember.plan) {
-                            case SubscriptionPlan.MONTHLY: planPrice = 150; break;
+                            case SubscriptionPlan.MONTHLY: planPrice = 140; break;
                             case SubscriptionPlan.TWO_WEEKS: planPrice = 100; break;
                             case SubscriptionPlan.ONE_WEEK: planPrice = 70; break;
                             case SubscriptionPlan.DAY_MORNING:
