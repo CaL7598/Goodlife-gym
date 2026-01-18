@@ -46,7 +46,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     email: '',
     phone: '',
     plan: SubscriptionPlan.MONTHLY,
-    status: 'active',
     startDate: '',
     expiryDate: ''
   });
@@ -1477,7 +1476,6 @@ Jane Smith,jane@example.com,0244123457,Premium,2024-01-15,2024-02-15,active`}
                       email: '',
                       phone: '',
                       plan: SubscriptionPlan.MONTHLY,
-                      status: 'active',
                       startDate: '',
                       expiryDate: ''
                     });
@@ -1615,28 +1613,47 @@ Jane Smith,jane@example.com,0244123457,Premium,2024-01-15,2024-02-15,active`}
 
                   {/* Expiry Date */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Expiry Date *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Expiry Date * 
+                      {(existingMember.plan === SubscriptionPlan.DAY_MORNING || existingMember.plan === SubscriptionPlan.DAY_EVENING) && (
+                        <span className="text-xs text-blue-600 ml-2">
+                          (Time will be auto-set: {existingMember.plan === SubscriptionPlan.DAY_MORNING ? '11:00 AM' : '8:00 PM'})
+                        </span>
+                      )}
+                    </label>
                     <input 
                       required 
                       type="date" 
                       className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={existingMember.expiryDate}
-                      onChange={e => setExistingMember({...existingMember, expiryDate: e.target.value})}
+                      value={existingMember.expiryDate?.split('T')[0] || existingMember.expiryDate}
+                      onChange={e => {
+                        let expiryValue = e.target.value;
+                        // For day passes, add the appropriate time
+                        if (existingMember.plan === SubscriptionPlan.DAY_MORNING) {
+                          expiryValue = `${expiryValue}T11:00:00`;
+                        } else if (existingMember.plan === SubscriptionPlan.DAY_EVENING) {
+                          expiryValue = `${expiryValue}T20:00:00`;
+                        }
+                        setExistingMember({...existingMember, expiryDate: expiryValue});
+                      }}
                     />
                   </div>
 
-                  {/* Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select 
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={existingMember.status}
-                      onChange={e => setExistingMember({...existingMember, status: e.target.value as 'active' | 'expiring' | 'expired'})}
-                    >
-                      <option value="active">Active</option>
-                      <option value="expiring">Expiring</option>
-                      <option value="expired">Expired</option>
-                    </select>
+                  {/* Status - Auto-calculated info */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5">
+                        <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700">Status Auto-Calculation</p>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          Member status (Active/Expiring/Expired) will be automatically calculated based on the expiry date when displayed in the system.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -1660,7 +1677,6 @@ Jane Smith,jane@example.com,0244123457,Premium,2024-01-15,2024-02-15,active`}
                         email: '',
                         phone: '',
                         plan: SubscriptionPlan.MONTHLY,
-                        status: 'active',
                         startDate: '',
                         expiryDate: ''
                       });
