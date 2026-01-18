@@ -183,12 +183,12 @@ const App: React.FC = () => {
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
       if (!supabaseUrl || !supabaseKey) {
-        console.log('⚠️ Supabase not configured, using local state');
+        devLog.log('⚠️ Supabase not configured, using local state');
         setIsLoading(false);
         return;
       }
 
-      console.log('🔄 Connecting to Supabase...');
+      devLog.log('🔄 Connecting to Supabase...');
       setUseSupabase(true);
       setIsLoading(true);
 
@@ -198,13 +198,12 @@ const App: React.FC = () => {
         
         if (testError) {
           if (testError.code === 'PGRST116' || testError.message.includes('relation') || testError.message.includes('does not exist')) {
-            console.warn('⚠️ Supabase connected, but tables not created yet.');
-            console.log('💡 Run the SQL from SUPABASE_SETUP.md in your Supabase SQL Editor to create tables.');
+            devLog.warn('⚠️ Supabase connected, but tables not created yet.');
           } else {
-            console.error('❌ Supabase connection error:', testError.message);
+            logger.error('❌ Supabase connection error:', testError.message);
           }
         } else {
-          console.log('✅ Supabase connection successful!');
+          devLog.log('✅ Supabase connection successful!');
         }
 
         // Load all data from Supabase
@@ -221,7 +220,7 @@ const App: React.FC = () => {
           expensesService.getAll().catch(() => [])
         ]);
 
-        console.log('📊 Data loaded from Supabase:', {
+        devLog.log('📊 Data loaded from Supabase:', {
           members: membersData.length,
           staff: staffData.length,
           payments: paymentsData.length,

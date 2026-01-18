@@ -1059,15 +1059,13 @@ function mapStaffFromDB(db: any): StaffMember {
           });
         }
         
-        // Log successful privilege mapping for debugging
+        // Log successful privilege mapping for debugging (dev only)
         if (privileges.length > 0) {
-          console.log('✅ Loaded privileges for', db.email, ':', privileges);
+          devLog.log('✅ Loaded privileges for [STAFF MEMBER]:', privileges.length, 'privileges');
         }
       }
     } catch (error) {
-      console.error('❌ Error parsing privileges for', db.email, ':', error, {
-        rawValue: db.privileges
-      });
+      devLog.warn('❌ Error parsing privileges:', error);
       privileges = undefined;
     }
   }
@@ -1081,7 +1079,7 @@ function mapStaffFromDB(db: any): StaffMember {
         passwordHistory = parsed;
       }
     } catch (error) {
-      console.error('❌ Error parsing password_history for', db.email, ':', error);
+      devLog.warn('❌ Error parsing password_history:', error);
     }
   }
   
