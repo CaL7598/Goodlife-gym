@@ -33,11 +33,12 @@ function requireSupabase() {
 // Members
 export const membersService = {
   async getAll(): Promise<Member[]> {
-    // Order by id (PK always indexed) to avoid statement timeout on large tables
+    // Exclude photo (large base64) and limit to avoid timeout; load photos on demand via getById
     const { data, error } = await requireSupabase()
       .from('members')
-      .select('*')
-      .order('id', { ascending: false });
+      .select('id, full_name, email, phone, address, emergency_contact, plan, start_date, expiry_date, status, created_at')
+      .order('id', { ascending: false })
+      .limit(500);
     
     if (error) {
       console.error('Error fetching members:', error);
