@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { calculateMemberStatus } from './dateUtils';
+import { devLog } from './logger';
 import { 
   Member, 
   StaffMember, 
@@ -32,17 +33,25 @@ function requireSupabase() {
 // Members
 export const membersService = {
   async getAll(): Promise<Member[]> {
+    // Order by id (PK always indexed) to avoid statement timeout on large tables
     const { data, error } = await requireSupabase()
       .from('members')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('id', { ascending: false });
     
     if (error) {
       console.error('Error fetching members:', error);
       throw error;
     }
     
-    return (data || []).map(mapMemberFromDB);
+    const members = (data || []).map(mapMemberFromDB);
+    // Sort by createdAt (newest first) in memory to avoid slow DB ORDER BY
+    members.sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da;
+    });
+    return members;
   },
 
   async getById(id: string): Promise<Member | null> {

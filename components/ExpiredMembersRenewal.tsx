@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Member, SubscriptionPlan, PaymentMethod, PaymentStatus, UserRole, PaymentRecord } from '../types';
-import { RefreshCw, X, Calendar, CreditCard, User, Phone, Mail, AlertCircle } from 'lucide-react';
+import { RefreshCw, X, Calendar, CreditCard, User, Phone, Mail, AlertCircle, Search } from 'lucide-react';
 import { membersService, paymentsService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import { calculateExpiryDate } from '../lib/dateUtils';
@@ -33,6 +33,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
   logActivity
 }) => {
   const { showSuccess, showError } = useToast();
+  const [expiredSearchTerm, setExpiredSearchTerm] = useState('');
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [renewingMember, setRenewingMember] = useState<Member | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,6 +49,17 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
       new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime()
     );
   }, [members]);
+
+  // Filter expired members by search
+  const filteredExpiredMembers = useMemo(() => {
+    if (!expiredSearchTerm.trim()) return expiredMembers;
+    const term = expiredSearchTerm.toLowerCase().trim();
+    return expiredMembers.filter(m =>
+      m.fullName.toLowerCase().includes(term) ||
+      (m.email && m.email.toLowerCase().includes(term)) ||
+      (m.phone && m.phone.includes(term))
+    );
+  }, [expiredMembers, expiredSearchTerm]);
 
   // Handle plan selection - auto-calculate amount
   const handlePlanChange = (planValue: string) => {
@@ -235,8 +247,41 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
             <p className="text-sm text-slate-500">No renewals needed at this time.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {expiredMembers.map((member) => (
+          <div className="space-y-4">
+            {/* Search bar for expired members */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone..."
+                value={expiredSearchTerm}
+                onChange={e => setExpiredSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
+              />
+              {expiredSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setExpiredSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            {filteredExpiredMembers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No expired members match &quot;{expiredSearchTerm}&quot;</p>
+                <button
+                  type="button"
+                  onClick={() => setExpiredSearchTerm('')}
+                  className="mt-2 text-sm text-rose-600 hover:underline"
+                >
+                  Clear search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredExpiredMembers.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg hover:border-amber-300 hover:shadow-md transition-all"
@@ -255,7 +300,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-900 truncate">{member.fullName}</p>
-                    <p className="text-xs text-slate-500 truncate">{member.email}</p>
+                    <p className="text-xs text-slate-500 truncate">{member.email || '-'}</p>
                     <p className="text-xs text-slate-600 mt-1">
                       Registered: {new Date(member.startDate).toLocaleDateString()}
                     </p>
@@ -273,6 +318,8 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                 </button>
               </div>
             ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -314,7 +361,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                     <h3 className="font-bold text-slate-900">{renewingMember.fullName}</h3>
                     <p className="text-sm text-slate-600 flex items-center gap-2 mt-1">
                       <Mail size={14} />
-                      {renewingMember.email}
+                      {renewingMember.email || '-'}
                     </p>
                     <p className="text-sm text-slate-600 flex items-center gap-2 mt-1">
                       <Phone size={14} />

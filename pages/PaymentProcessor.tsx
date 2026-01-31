@@ -34,6 +34,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     momoPhone: '',
     network: ''
   });
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
   
   // Get current staff member for confirmation tracking
   const currentStaff = useMemo(() => {
@@ -47,6 +48,17 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
     }
     return currentStaff?.fullName || 'Staff';
   };
+
+  // Filter members for Record Payment search
+  const filteredMembersForPayment = useMemo(() => {
+    if (!memberSearchTerm.trim()) return members;
+    const term = memberSearchTerm.toLowerCase().trim();
+    return members.filter(m =>
+      m.fullName.toLowerCase().includes(term) ||
+      (m.email && m.email.toLowerCase().includes(term)) ||
+      (m.phone && m.phone.includes(term))
+    );
+  }, [members, memberSearchTerm]);
 
   // Function to refresh payments from Supabase
   const refreshPayments = async () => {
@@ -382,6 +394,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
       }
       
       // Reset form
+      setMemberSearchTerm('');
       setNewPay({
         memberId: '',
         amount: 0,
@@ -528,7 +541,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
               <button 
                 onClick={() => {
                   setShowPayModal(false);
-                  // Reset form when closing
+                  setMemberSearchTerm('');
                   setNewPay({
                     memberId: '',
                     amount: 0,
@@ -549,16 +562,60 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Select Member</label>
-                  <select 
-                    required
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-500"
-                    onChange={e => setNewPay({...newPay, memberId: e.target.value})}
-                  >
-                    <option value="">-- Choose Member --</option>
-                    {members.map(m => (
-                      <option key={m.id} value={m.id}>{m.fullName} ({m.plan})</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="text"
+                      placeholder="Search by name, phone, or email..."
+                      value={memberSearchTerm}
+                      onChange={e => setMemberSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 text-sm"
+                    />
+                    {memberSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setMemberSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                    {filteredMembersForPayment.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-slate-500 text-center">
+                        {memberSearchTerm ? `No members match "${memberSearchTerm}"` : 'Type to search members'}
+                      </div>
+                    ) : (
+                      filteredMembersForPayment.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            setNewPay({...newPay, memberId: m.id});
+                            setMemberSearchTerm('');
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-slate-50 transition-colors ${newPay.memberId === m.id ? 'bg-rose-50 border-l-4 border-l-rose-500' : ''}`}
+                        >
+                          <span className="font-medium text-slate-800">{m.fullName}</span>
+                          <span className="text-slate-500 text-xs">({m.plan})</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {newPay.memberId && (
+                    <p className="mt-2 text-xs text-slate-600 flex items-center gap-2">
+                      <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                      <span>Selected: {members.find(m => m.id === newPay.memberId)?.fullName}</span>
+                      <button
+                        type="button"
+                        onClick={() => setNewPay({...newPay, memberId: ''})}
+                        className="text-rose-600 hover:underline"
+                      >
+                        Change
+                      </button>
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

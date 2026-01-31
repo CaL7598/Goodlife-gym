@@ -37,6 +37,7 @@ import {
   expensesService
 } from './lib/database';
 import { supabase } from './lib/supabase';
+import { devLog, logger } from './lib/logger';
 
 // UI Components
 import PublicLayout from './components/PublicLayout';

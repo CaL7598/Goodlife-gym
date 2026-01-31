@@ -63,6 +63,16 @@ const ARKESEL_SENDER_ID = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKE
 const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY;
 const arkeselClient = ARKESEL_SENDER_ID && ARKESEL_API_KEY ? new Arkesel(ARKESEL_SENDER_ID, ARKESEL_API_KEY) : null;
 
+// Sender ID must be ≤11 characters (Arkesel limit). "Goodlife Fitness" (16) will fail; use "GOODLIFE GH" (11) or similar.
+function checkSenderId(senderId) {
+  if (!senderId) return { ok: false, error: 'Sender ID not set' };
+  const len = String(senderId).length;
+  if (len > 11) {
+    return { ok: false, error: `Sender ID must be ≤11 characters. "${senderId}" has ${len}. Use e.g. "GOODLIFE GH" (11 chars).` };
+  }
+  return { ok: true };
+}
+
 // Helper function to format phone number for Arkesel (233XXXXXXXXX format without +)
 function formatPhoneNumber(phone) {
   if (!phone) return null;
@@ -98,9 +108,48 @@ function createPaymentSMSText(memberName, amount, paymentMethod, paymentDate, tr
   return text;
 }
 
+// Wrap arkesel send: library calls callback only on success; on API error it throws (promise rejects).
+// We must handle both so we never hang and always propagate errors.
+function sendArkeselSMS(client, to, message) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (err, data) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve(data);
+    };
+    client.send(to, message, null, (cb) => {
+      if (cb && cb.code === 'ok') finish(null, cb);
+      else finish(new Error(cb?.message || 'Failed to send SMS'));
+    }).catch((e) => finish(e, null));
+  });
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Email API server is running' });
+});
+
+// SMS configuration diagnostic (no secrets exposed)
+app.get('/api/sms-config', (req, res) => {
+  const senderId = process.env.ARKESEL_SENDER_ID || process.env.VITE_ARKESEL_SENDER_ID;
+  const apiKeySet = !!(process.env.ARKESEL_API_KEY || process.env.VITE_ARKESEL_API_KEY);
+  const senderCheck = checkSenderId(senderId);
+  res.json({
+    smsConfigured: !!(senderId && apiKeySet && senderCheck.ok),
+    senderIdSet: !!senderId,
+    apiKeySet,
+    senderIdLength: senderId ? String(senderId).length : 0,
+    senderIdValid: senderCheck.ok,
+    suggestion: !senderId
+      ? 'Set ARKESEL_SENDER_ID and ARKESEL_API_KEY (e.g. in Render Environment)'
+      : !apiKeySet
+      ? 'Set ARKESEL_API_KEY'
+      : !senderCheck.ok
+      ? senderCheck.error
+      : 'SMS looks configured. Use GOODLIFE GH (≤11 chars) if sends fail.'
+  });
 });
 
 // Diagnostic endpoint to check email configuration
@@ -749,6 +798,16 @@ app.post('/api/send-welcome-sms', async (req, res) => {
       });
     }
 
+    const senderCheck = checkSenderId(senderId);
+    if (!senderCheck.ok) {
+      console.warn('⚠️ Arkesel sender ID invalid:', senderCheck.error);
+      return res.status(400).json({ 
+        error: 'Invalid sender ID',
+        suggestion: senderCheck.error,
+        hint: 'Use ARKESEL_SENDER_ID=GOODLIFE GH (11 characters max). See SMS_TROUBLESHOOTING.md'
+      });
+    }
+
     // Initialize Arkesel client if not already initialized
     let client = arkeselClient;
     if (!client) {
@@ -777,20 +836,7 @@ app.post('/api/send-welcome-sms', async (req, res) => {
       messageLength: messageText.length
     });
 
-    // Arkesel uses callback pattern, convert to Promise
-    // Arkesel success response: { code: "ok", message: "Successfully Send", balance: number, user: string }
-    // Arkesel error response: { code: "102", message: "Error message" }
-    const result = await new Promise((resolve, reject) => {
-      client.send(formattedPhone, messageText, null, (callback) => {
-        if (callback && callback.code === 'ok') {
-          // Success - Arkesel returns code: "ok" for successful sends
-          resolve(callback);
-        } else {
-          // Error - Arkesel returns error code and message
-          reject(new Error(callback?.message || 'Failed to send SMS'));
-        }
-      });
-    });
+    const result = await sendArkeselSMS(client, formattedPhone, messageText);
 
     console.log('✅ Welcome SMS sent successfully:', result);
     res.json({ success: true, data: result });
@@ -829,6 +875,16 @@ app.post('/api/send-payment-sms', async (req, res) => {
       });
     }
 
+    const senderCheck = checkSenderId(senderId);
+    if (!senderCheck.ok) {
+      console.warn('⚠️ Arkesel sender ID invalid:', senderCheck.error);
+      return res.status(400).json({ 
+        error: 'Invalid sender ID',
+        suggestion: senderCheck.error,
+        hint: 'Use ARKESEL_SENDER_ID=GOODLIFE GH (11 characters max). See SMS_TROUBLESHOOTING.md'
+      });
+    }
+
     // Initialize Arkesel client if not already initialized
     let client = arkeselClient;
     if (!client) {
@@ -857,20 +913,7 @@ app.post('/api/send-payment-sms', async (req, res) => {
       messageLength: messageText.length
     });
 
-    // Arkesel uses callback pattern, convert to Promise
-    // Arkesel success response: { code: "ok", message: "Successfully Send", balance: number, user: string }
-    // Arkesel error response: { code: "102", message: "Error message" }
-    const result = await new Promise((resolve, reject) => {
-      client.send(formattedPhone, messageText, null, (callback) => {
-        if (callback && callback.code === 'ok') {
-          // Success - Arkesel returns code: "ok" for successful sends
-          resolve(callback);
-        } else {
-          // Error - Arkesel returns error code and message
-          reject(new Error(callback?.message || 'Failed to send SMS'));
-        }
-      });
-    });
+    const result = await sendArkeselSMS(client, formattedPhone, messageText);
 
     console.log('✅ Payment SMS sent successfully:', result);
     res.json({ success: true, data: result });
@@ -909,6 +952,16 @@ app.post('/api/send-message-sms', async (req, res) => {
       });
     }
 
+    const senderCheck = checkSenderId(senderId);
+    if (!senderCheck.ok) {
+      console.warn('⚠️ Arkesel sender ID invalid:', senderCheck.error);
+      return res.status(400).json({ 
+        error: 'Invalid sender ID',
+        suggestion: senderCheck.error,
+        hint: 'Use ARKESEL_SENDER_ID=GOODLIFE GH (11 characters max). See SMS_TROUBLESHOOTING.md'
+      });
+    }
+
     // Initialize Arkesel client if not already initialized
     let client = arkeselClient;
     if (!client) {
@@ -938,20 +991,7 @@ app.post('/api/send-message-sms', async (req, res) => {
       messageLength: messageText.length
     });
 
-    // Arkesel uses callback pattern, convert to Promise
-    // Arkesel success response: { code: "ok", message: "Successfully Send", balance: number, user: string }
-    // Arkesel error response: { code: "102", message: "Error message" }
-    const result = await new Promise((resolve, reject) => {
-      client.send(formattedPhone, messageText, null, (callback) => {
-        if (callback && callback.code === 'ok') {
-          // Success - Arkesel returns code: "ok" for successful sends
-          resolve(callback);
-        } else {
-          // Error - Arkesel returns error code and message
-          reject(new Error(callback?.message || 'Failed to send SMS'));
-        }
-      });
-    });
+    const result = await sendArkeselSMS(client, formattedPhone, messageText);
 
     console.log('✅ Message SMS sent successfully:', result);
     res.json({ success: true, data: result });
@@ -981,7 +1021,12 @@ app.listen(PORT, () => {
   console.log(`🔑 API Key: ${process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY ? 'Set' : 'Missing'}`);
   console.log(`📱 Arkesel SMS configured: ${arkeselClient ? 'Yes' : 'No'}`);
   if (arkeselClient) {
-    console.log(`📱 Arkesel Sender ID: ${ARKESEL_SENDER_ID || 'Not set'}`);
+    const sid = ARKESEL_SENDER_ID || 'Not set';
+    console.log(`📱 Arkesel Sender ID: ${sid}`);
+    const sc = checkSenderId(ARKESEL_SENDER_ID);
+    if (!sc.ok) {
+      console.warn(`⚠️  Arkesel Sender ID invalid: ${sc.error}. SMS may fail. Use e.g. GOODLIFE GH (11 chars).`);
+    }
   } else {
     console.log(`⚠️  Arkesel not configured. Add ARKESEL_SENDER_ID and ARKESEL_API_KEY to .env`);
   }
