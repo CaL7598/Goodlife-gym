@@ -194,8 +194,8 @@ const App: React.FC = () => {
       setIsLoading(true);
 
       try {
-        // Test connection first
-        const { data: testData, error: testError } = await supabase.from('members').select('count').limit(1);
+        // Test connection first (avoid count - it times out on large tables)
+        const { error: testError } = await supabase.from('members').select('id').limit(1);
         
         if (testError) {
           if (testError.code === 'PGRST116' || testError.message.includes('relation') || testError.message.includes('does not exist')) {
