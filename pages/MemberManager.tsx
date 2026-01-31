@@ -56,7 +56,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   // Pagination state
   const PAGE_SIZE = 25;
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [hasMorePages, setHasMorePages] = useState(false);
   const [displayMembers, setDisplayMembers] = useState<Member[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
@@ -222,8 +222,9 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       if (searchTerm.trim()) {
         void loadSearch(searchTerm);
       } else {
-        membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data }) => {
+        membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, hasMore }) => {
           setDisplayMembers(data);
+          setHasMorePages(hasMore);
         }).catch(() => {});
       }
       setShowEditModal(false);
@@ -309,9 +310,9 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     // Update local state
     setMembers(prev => [...prev, createdMember]);
     setCurrentPage(1);
-    membersService.getPaginated(PAGE_SIZE, 0).then(({ data, total }) => {
+    membersService.getPaginated(PAGE_SIZE, 0).then(({ data, hasMore }) => {
       setDisplayMembers(data);
-      setTotalCount(total);
+      setHasMorePages(hasMore);
     }).catch(() => {});
     logActivity('Register Member', `Created profile for ${createdMember.fullName} (${createdMember.plan})`, 'admin');
     
@@ -583,9 +584,9 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
       if (successCount > 0) {
         setCurrentPage(1);
-        membersService.getPaginated(PAGE_SIZE, 0).then(({ data, total }) => {
+        membersService.getPaginated(PAGE_SIZE, 0).then(({ data, hasMore }) => {
           setDisplayMembers(data);
-          setTotalCount(total);
+          setHasMorePages(hasMore);
         }).catch(() => {});
         setTimeout(() => {
           setBulkData('');
@@ -642,9 +643,9 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     // Update local state
     setMembers(prev => prev.filter(m => m.id !== id));
-    membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, total }) => {
+    membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, hasMore }) => {
       setDisplayMembers(data);
-      setTotalCount(total);
+      setHasMorePages(hasMore);
       if (data.length === 0 && currentPage > 1) setCurrentPage(p => Math.max(1, p - 1));
     }).catch(() => {});
     logActivity('Delete Member', `Removed member ${memberToDelete?.fullName} from directory`, 'admin');
@@ -813,14 +814,18 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
           </table>
         </div>
 
-        {/* Pagination controls - only when not searching and multiple pages */}
-        {!listLoading && !isSearchMode && totalCount > PAGE_SIZE && (
+        {/* Pagination footer - show when we have data */}
+        {!listLoading && displayMembers.length > 0 && (
           <div className="px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
             <div className="text-sm text-slate-600">
-              Showing {startItem}–{endItem} of {totalCount} {isSearchMode ? 'results' : 'members'}
+              {isSearchMode
+                ? `Showing 1–${displayMembers.length} of ${displayMembers.length} results`
+                : hasMorePages
+                  ? `Showing ${startItem}–${endItem}`
+                  : `Showing ${startItem}–${endItem} of ${endItem} members`}
             </div>
             <div className="flex items-center gap-2">
-              {!isSearchMode && totalCount > PAGE_SIZE && (
+              {!isSearchMode && (currentPage > 1 || hasMorePages) && (
                 <>
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -830,12 +835,12 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                   >
                     <ChevronLeft size={18} />
                   </button>
-                  <span className="text-sm font-medium text-slate-700 min-w-[80px] text-center">
-                    Page {currentPage} of {totalPages}
+                  <span className="text-sm font-medium text-slate-700 min-w-[60px] text-center">
+                    Page {currentPage}
                   </span>
                   <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    disabled={!hasMorePages}
                     className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     aria-label="Next page"
                   >

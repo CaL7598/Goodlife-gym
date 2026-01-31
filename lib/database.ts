@@ -140,31 +140,29 @@ export const membersService = {
     }
   },
 
-  async getPaginated(limit: number = 25, offset: number = 0): Promise<{ data: Member[]; total: number }> {
+  async getPaginated(limit: number = 25, offset: number = 0): Promise<{ data: Member[]; hasMore: boolean }> {
+    // Avoid count query - it causes statement timeout on large tables.
+    // Fetch limit+1 to detect if there's a next page.
     const sb = requireSupabase();
-    const { count, error: countError } = await sb
-      .from('members')
-      .select('*', { count: 'exact', head: true });
-    if (countError) {
-      console.error('Error fetching members count:', countError);
-      throw countError;
-    }
     const { data, error } = await sb
       .from('members')
       .select('*')
       .order('id', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + limit);
     if (error) {
       console.error('Error fetching members page:', error);
       throw error;
     }
-    const members = (data || []).map(mapMemberFromDB);
+    const raw = data || [];
+    const hasMore = raw.length > limit;
+    const pageData = hasMore ? raw.slice(0, limit) : raw;
+    const members = pageData.map(mapMemberFromDB);
     members.sort((a, b) => {
       const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return db - da;
     });
-    return { data: members, total: count ?? 0 };
+    return { data: members, hasMore };
   },
 
   async search(query: string, limit: number = 50): Promise<Member[]> {
