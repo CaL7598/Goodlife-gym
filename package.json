@@ -13,7 +13,9 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "auto-push": "node auto-push.js",
-    "watch-push": "node watch-and-push.js"
+    "watch-push": "node watch-and-push.js",
+    "supabase:export": "node -r dotenv/config scripts/export-supabase-data.js",
+    "supabase:import": "node -r dotenv/config scripts/import-supabase-data.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",

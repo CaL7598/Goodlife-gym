@@ -138,6 +138,56 @@ export const membersService = {
       console.error('Error deleting member:', error);
       throw error;
     }
+  },
+
+  async getPaginated(limit: number = 25, offset: number = 0): Promise<{ data: Member[]; total: number }> {
+    const sb = requireSupabase();
+    const { count, error: countError } = await sb
+      .from('members')
+      .select('*', { count: 'exact', head: true });
+    if (countError) {
+      console.error('Error fetching members count:', countError);
+      throw countError;
+    }
+    const { data, error } = await sb
+      .from('members')
+      .select('*')
+      .order('id', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) {
+      console.error('Error fetching members page:', error);
+      throw error;
+    }
+    const members = (data || []).map(mapMemberFromDB);
+    members.sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da;
+    });
+    return { data: members, total: count ?? 0 };
+  },
+
+  async search(query: string, limit: number = 50): Promise<Member[]> {
+    if (!query || !query.trim()) return [];
+    const sanitized = query.trim().replace(/[%_]/g, '');
+    const term = `%${sanitized}%`;
+    const { data, error } = await requireSupabase()
+      .from('members')
+      .select('*')
+      .or(`full_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`)
+      .order('id', { ascending: false })
+      .limit(limit);
+    if (error) {
+      console.error('Error searching members:', error);
+      throw error;
+    }
+    const members = (data || []).map(mapMemberFromDB);
+    members.sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da;
+    });
+    return members;
   }
 };
 

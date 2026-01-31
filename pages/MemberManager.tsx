@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Member, UserRole, SubscriptionPlan } from '../types';
-import { Search, Plus, Edit2, Trash2, Filter, MoreVertical, X, Upload, FileText, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Filter, ChevronLeft, ChevronRight, X, Upload, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
 import { sendWelcomeEmail } from '../lib/emailService';
 import { membersService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
@@ -52,6 +52,14 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [existingPhotoPreview, setExistingPhotoPreview] = useState<string | null>(null);
   const [registrationFee, setRegistrationFee] = useState<number>(0);
+
+  // Pagination state
+  const PAGE_SIZE = 25;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [displayMembers, setDisplayMembers] = useState<Member[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   // Clear form fields on component mount (page refresh)
   useEffect(() => {
@@ -211,7 +219,13 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
       // Update local state
       setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
-      
+      if (searchTerm.trim()) {
+        void loadSearch(searchTerm);
+      } else {
+        membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data }) => {
+          setDisplayMembers(data);
+        }).catch(() => {});
+      }
       setShowEditModal(false);
       setEditingMember(null);
       setEditPhotoPreview(null);
@@ -294,6 +308,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     // Update local state
     setMembers(prev => [...prev, createdMember]);
+    setCurrentPage(1);
+    membersService.getPaginated(PAGE_SIZE, 0).then(({ data, total }) => {
+      setDisplayMembers(data);
+      setTotalCount(total);
+    }).catch(() => {});
     logActivity('Register Member', `Created profile for ${createdMember.fullName} (${createdMember.plan})`, 'admin');
     
     // Send welcome email
@@ -563,7 +582,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       });
 
       if (successCount > 0) {
-        // Clear form after successful import
+        setCurrentPage(1);
+        membersService.getPaginated(PAGE_SIZE, 0).then(({ data, total }) => {
+          setDisplayMembers(data);
+          setTotalCount(total);
+        }).catch(() => {});
         setTimeout(() => {
           setBulkData('');
           if (failedCount === 0) {
@@ -588,7 +611,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       showError("Only Super Admins can delete members.");
       return;
     }
-    const memberToDelete = members.find(m => m.id === id);
+    const memberToDelete = displayMembers.find(m => m.id === id) ?? members.find(m => m.id === id);
     setConfirmModal({
       isOpen: true,
       message: `Are you sure you want to delete ${memberToDelete?.fullName}? This action cannot be undone.`,
@@ -600,7 +623,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   };
 
   const performDelete = async (id: string) => {
-    const memberToDelete = members.find(m => m.id === id);
+    const memberToDelete = displayMembers.find(m => m.id === id) ?? members.find(m => m.id === id);
     
     // Try to delete from Supabase if configured
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -619,6 +642,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     // Update local state
     setMembers(prev => prev.filter(m => m.id !== id));
+    membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, total }) => {
+      setDisplayMembers(data);
+      setTotalCount(total);
+      if (data.length === 0 && currentPage > 1) setCurrentPage(p => Math.max(1, p - 1));
+    }).catch(() => {});
     logActivity('Delete Member', `Removed member ${memberToDelete?.fullName} from directory`, 'admin');
     showSuccess(`Member ${memberToDelete?.fullName} deleted successfully`);
   };
@@ -698,7 +726,17 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredMembers.map((member) => (
+              {listLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                    <div className="flex justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                      Loading members...
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+              displayMembers.map((member) => (
                 <tr key={member.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <div className="flex items-center gap-3">
@@ -770,14 +808,60 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
 
+        {/* Pagination controls - only when not searching and multiple pages */}
+        {!listLoading && !isSearchMode && totalCount > PAGE_SIZE && (
+          <div className="px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+            <div className="text-sm text-slate-600">
+              Showing {startItem}–{endItem} of {totalCount} {isSearchMode ? 'results' : 'members'}
+            </div>
+            <div className="flex items-center gap-2">
+              {!isSearchMode && totalCount > PAGE_SIZE && (
+                <>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span className="text-sm font-medium text-slate-700 min-w-[80px] text-center">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4 p-4">
-          {filteredMembers.map((member) => (
+          {listLoading ? (
+            <div className="py-12 text-center text-slate-500">
+              <div className="flex justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                Loading members...
+              </div>
+            </div>
+          ) : displayMembers.length === 0 ? (
+            <div className="py-12 text-center text-slate-500">
+              {searchTerm.trim() ? 'No members match your search.' : 'No members yet. Register your first member to get started.'}
+            </div>
+          ) : (
+          displayMembers.map((member) => (
             <div key={member.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
               <div className="flex items-start gap-3">
                 {member.photo ? (
@@ -830,7 +914,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
               <div className="pt-3 border-t border-slate-100">
                 <div className="text-xs text-slate-500 mb-1">Contact</div>
                 <div className="text-sm text-slate-600">{member.phone}</div>
-                <div className="text-xs text-slate-400 truncate">{member.email}</div>
+                <div className="text-xs text-slate-400 truncate">{member.email || '-'}</div>
               </div>
               {member.createdAt && (
                 <div className="pt-3 border-t border-slate-100">
@@ -851,7 +935,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                 </div>
               )}
             </div>
-          ))}
+          )))}
         </div>
       </div>
 
