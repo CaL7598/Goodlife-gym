@@ -4,6 +4,7 @@ import { Member, UserRole, SubscriptionPlan } from '../types';
 import { Search, Plus, Edit2, Trash2, Filter, ChevronLeft, ChevronRight, X, Upload, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
 import { sendWelcomeEmail } from '../lib/emailService';
 import { membersService } from '../lib/database';
+import { resizeImageForUpload } from '../lib/imageUtils';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { calculateExpiryDate } from '../lib/dateUtils';
@@ -102,35 +103,30 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     }
   };
 
-  // Handle photo upload for existing members
-  const handleExistingPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle photo upload for existing members (resizes before base64)
+  const handleExistingPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        showError('Please select an image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        showError('Image size must be less than 5MB');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setExistingPhotoPreview(base64String);
-        setExistingMember({ ...existingMember, photo: base64String });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showError('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Image size must be less than 5MB');
+      return;
+    }
+    try {
+      const base64String = await resizeImageForUpload(file);
+      setExistingPhotoPreview(base64String);
+      setExistingMember(prev => ({ ...prev, photo: base64String }));
+    } catch {
+      showError('Failed to process image. Please try another file.');
     }
   };
 
   const handleRemovePhoto = () => {
     setPhotoPreview(null);
-    setNewMember({ ...newMember, photo: undefined });
+    setNewMember(prev => ({ ...prev, photo: undefined }));
   };
 
   // Handle edit member
@@ -140,31 +136,26 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     setShowEditModal(true);
   };
 
-  // Handle edit photo upload (for staff)
-  const handleEditPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle edit photo upload (resizes before base64)
+  const handleEditPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        showError('Please select an image file');
-        return;
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showError('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Image size must be less than 5MB');
+      return;
+    }
+    try {
+      const base64String = await resizeImageForUpload(file);
+      setEditPhotoPreview(base64String);
+      if (editingMember) {
+        setEditingMember({ ...editingMember, photo: base64String });
       }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        showError('Image size must be less than 5MB');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setEditPhotoPreview(base64String);
-        if (editingMember) {
-          setEditingMember({ ...editingMember, photo: base64String });
-        }
-      };
-      reader.readAsDataURL(file);
+    } catch {
+      showError('Failed to process image. Please try another file.');
     }
   };
 

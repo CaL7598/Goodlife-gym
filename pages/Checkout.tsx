@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SubscriptionPlan, PaymentMethod, PaymentStatus } from '../types';
 import { ArrowLeft, CreditCard, Smartphone, X, CheckCircle2, AlertCircle, Copy, Check, Image as ImageIcon, User } from 'lucide-react';
 import { paymentsService } from '../lib/database';
+import { resizeImageForUpload } from '../lib/imageUtils';
 import { MOBILE_MONEY_NUMBER, MOBILE_MONEY_NAME } from '../constants';
 import { calculateExpiryDate } from '../lib/dateUtils';
 
@@ -60,35 +61,30 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
   const registrationFee = (selectedPlan.name === 'Day Morning' || selectedPlan.name === 'Day Evening') ? 0 : 100;
   const totalAmount = planPrice + registrationFee;
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setPhotoPreview(base64String);
-        setMemberData({ ...memberData, photo: base64String });
-        setError('');
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+    try {
+      const base64String = await resizeImageForUpload(file);
+      setPhotoPreview(base64String);
+      setMemberData(prev => ({ ...prev, photo: base64String }));
+      setError('');
+    } catch {
+      setError('Failed to process image. Please try another file.');
     }
   };
 
   const handleRemovePhoto = () => {
     setPhotoPreview(null);
-    setMemberData({ ...memberData, photo: undefined });
+    setMemberData(prev => ({ ...prev, photo: undefined }));
   };
 
   const handleMemberSubmit = (e: React.FormEvent) => {
