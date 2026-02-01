@@ -707,6 +707,19 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         <h2 className="text-2xl font-bold text-slate-900">Member Directory</h2>
         <div className="flex flex-wrap gap-2">
           <button 
+            onClick={handleResizePhotos}
+            disabled={resizingPhotos}
+            title="Resize existing member photos to reduce storage"
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {resizingPhotos ? (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <ImageIcon size={20} />
+            )}
+            Resize Photos
+          </button>
+          <button 
             onClick={() => setShowBulkImportModal(true)}
             className="bg-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors shadow-sm"
           >
