@@ -707,24 +707,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         <h2 className="text-2xl font-bold text-slate-900">Member Directory</h2>
         <div className="flex flex-wrap gap-2">
           <button 
-            onClick={handleResizePhotos}
-            disabled={resizingPhotos}
-            title="Resize existing member photos to reduce storage"
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            {resizingPhotos ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {resizeProgress || 'Resizing...'}
-              </>
-            ) : (
-              <>
-                <ImageIcon size={20} />
-                Resize Photos
-              </>
-            )}
-          </button>
-          <button 
             onClick={() => setShowBulkImportModal(true)}
             className="bg-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors shadow-sm"
           >
@@ -761,6 +743,19 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
+            <button 
+              onClick={handleResizePhotos}
+              disabled={resizingPhotos}
+              title="Resize existing member photos"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-medium whitespace-nowrap disabled:opacity-50"
+            >
+              {resizingPhotos ? (
+                <span className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <ImageIcon size={14} />
+              )}
+              Resize Photos
+            </button>
              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white bg-slate-100 whitespace-nowrap">
               <Filter size={14} /> Filter
              </button>
