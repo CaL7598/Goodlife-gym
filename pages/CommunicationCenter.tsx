@@ -1,14 +1,15 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Member } from '../types';
-import { Send, MessageSquare, History, Users, CheckSquare, Square } from 'lucide-react';
+import { Send, MessageSquare, History, Users, CheckSquare, Square, AlertCircle } from 'lucide-react';
 // AI Auto-Draft feature disabled
 // import { generateCommunication } from '../geminiService';
-import { sendMessageSMS, sendBulkMessageSMS } from '../lib/smsService';
+import { sendMessageSMS, sendBulkMessageSMS, isSmsConfigured } from '../lib/smsService';
 import { useToast } from '../contexts/ToastContext';
 
 const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   const { showSuccess, showError } = useToast();
+  const smsConfigured = isSmsConfigured();
   const [sendMode, setSendMode] = useState<'single' | 'broadcast'>('single');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
@@ -75,7 +76,14 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   // };
 
   const handleSend = async () => {
-    if (!message) return;
+    if (!message) {
+      showError('Please enter a message to send.');
+      return;
+    }
+    if (!smsConfigured) {
+      showError('SMS not configured. Set VITE_API_URL to your backend URL (e.g. https://your-app.onrender.com) in your deployment environment.');
+      return;
+    }
 
     if (sendMode === 'single') {
       if (!selectedMember) return;
@@ -174,6 +182,18 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
           <h2 className="text-2xl font-bold text-slate-900">Communication Center</h2>
           <p className="text-slate-500 text-sm">Send SMS messages to gym members.</p>
         </div>
+
+        {!smsConfigured && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+            <div>
+              <p className="font-bold text-amber-900">SMS not configured</p>
+              <p className="text-sm text-amber-800 mt-1">
+                Set <code className="bg-amber-100 px-1 rounded">VITE_API_URL</code> to your backend URL (e.g. https://your-app.onrender.com) in your deployment environment and rebuild. Without this, no SMS can be sent.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
           {/* Send Mode Toggle */}
@@ -309,13 +329,22 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
             />
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col gap-2">
+            {members.length === 0 && (
+              <p className="text-sm text-amber-600">No members in the directory. Add members first to send messages.</p>
+            )}
             <button 
               onClick={handleSend}
               disabled={
                 !message || 
                 (sendMode === 'single' && !selectedMemberId) ||
                 (sendMode === 'broadcast' && selectedCount === 0)
+              }
+              title={
+                !message ? 'Enter a message first' :
+                sendMode === 'single' && !selectedMemberId ? 'Select a member first' :
+                sendMode === 'broadcast' && selectedCount === 0 ? 'Select at least one member or use Select All' :
+                undefined
               }
               className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-rose-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

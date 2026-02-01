@@ -12,6 +12,9 @@
 // In production, if VITE_API_URL is not set, SMS features will be disabled
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : null);
 
+/** Check if SMS is configured (backend URL set) */
+export const isSmsConfigured = (): boolean => !!API_BASE_URL;
+
 export interface WelcomeSMSParams {
   memberName: string;
   memberPhone: string;
