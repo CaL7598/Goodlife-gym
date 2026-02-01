@@ -346,12 +346,12 @@ const AdminDashboard: React.FC<DashboardProps> = ({
     setResizingPhotos(true);
     setResizeProgress('Starting...');
     let offset = 0;
-    const pageSize = 25;
+    const pageSize = 10;
     let totalResized = 0;
     try {
       let hasMore = true;
       while (hasMore) {
-        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset);
+        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset, true);
         hasMore = more;
         for (const m of data) {
           if (m.photo && m.photo.startsWith('data:image')) {

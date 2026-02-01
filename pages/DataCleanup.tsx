@@ -196,13 +196,13 @@ const DataCleanup: React.FC<DataCleanupProps> = ({
     setResizing(true);
     setResizeProgress('Starting...');
     let offset = 0;
-    const PAGE_SIZE = 25;
+    const PAGE_SIZE = 10;
     let totalResized = 0;
     let totalProcessed = 0;
     try {
       let hasMore = true;
       while (hasMore) {
-        const { data, hasMore: more } = await membersService.getPaginated(PAGE_SIZE, offset);
+        const { data, hasMore: more } = await membersService.getPaginated(PAGE_SIZE, offset, true);
         hasMore = more;
         for (const m of data) {
           if (m.photo && m.photo.startsWith('data:image')) {

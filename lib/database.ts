@@ -140,13 +140,14 @@ export const membersService = {
     }
   },
 
-  async getPaginated(limit: number = 25, offset: number = 0): Promise<{ data: Member[]; hasMore: boolean }> {
+  async getPaginated(limit: number = 25, offset: number = 0, includePhoto: boolean = false): Promise<{ data: Member[]; hasMore: boolean }> {
     // Avoid count query - it causes statement timeout on large tables.
-    // Fetch limit+1 to detect if there's a next page.
+    // Exclude photo by default to prevent timeout (large base64). Include only when needed (e.g. resize tool).
     const sb = requireSupabase();
+    const cols = includePhoto ? '*' : 'id, full_name, email, phone, address, emergency_contact, plan, start_date, expiry_date, status, created_at';
     const { data, error } = await sb
       .from('members')
-      .select('*')
+      .select(cols)
       .order('id', { ascending: false })
       .range(offset, offset + limit);
     if (error) {
@@ -169,9 +170,10 @@ export const membersService = {
     if (!query || !query.trim()) return [];
     const sanitized = query.trim().replace(/[%_]/g, '');
     const term = `%${sanitized}%`;
+    const cols = 'id, full_name, email, phone, address, emergency_contact, plan, start_date, expiry_date, status, created_at';
     const { data, error } = await requireSupabase()
       .from('members')
-      .select('*')
+      .select(cols)
       .or(`full_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`)
       .order('id', { ascending: false })
       .limit(limit);

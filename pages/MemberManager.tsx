@@ -161,10 +161,21 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     setNewMember(prev => ({ ...prev, photo: undefined }));
   };
 
-  // Handle edit member
-  const handleEditClick = (member: Member) => {
-    setEditingMember(member);
-    setEditPhotoPreview(member.photo || null);
+  // Handle edit member - fetch full member with photo if list view didn't include it
+  const handleEditClick = async (member: Member) => {
+    if (!member.photo) {
+      const full = await membersService.getById(member.id);
+      if (full) {
+        setEditingMember(full);
+        setEditPhotoPreview(full.photo || null);
+      } else {
+        setEditingMember(member);
+        setEditPhotoPreview(null);
+      }
+    } else {
+      setEditingMember(member);
+      setEditPhotoPreview(member.photo || null);
+    }
     setShowEditModal(true);
   };
 
@@ -726,12 +737,12 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     setResizingPhotos(true);
     setResizeProgress('Starting...');
     let offset = 0;
-    const pageSize = 25;
+    const pageSize = 10;
     let totalResized = 0;
     try {
       let hasMore = true;
       while (hasMore) {
-        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset);
+        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset, true);
         hasMore = more;
         for (const m of data) {
           if (m.photo && m.photo.startsWith('data:image')) {
