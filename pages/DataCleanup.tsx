@@ -186,51 +186,6 @@ const DataCleanup: React.FC<DataCleanupProps> = ({
     }
   ];
 
-  const handleResizePhotos = async () => {
-    if (!ensureSupabase()) return;
-    setResizing(true);
-    setResizeProgress('Starting...');
-    let offset = 0;
-    const PAGE_SIZE = 10;
-    let totalResized = 0;
-    let totalProcessed = 0;
-    try {
-      let hasMore = true;
-      while (hasMore) {
-        const { data, hasMore: more } = await membersService.getPaginated(PAGE_SIZE, offset, true);
-        hasMore = more;
-        for (const m of data) {
-          if (m.photo && m.photo.startsWith('data:image')) {
-            try {
-              const resized = await resizeBase64Image(m.photo);
-              await membersService.update(m.id, { photo: resized });
-              totalResized++;
-              totalProcessed++;
-              setResizeProgress(`Processed ${totalProcessed}, resized ${totalResized}...`);
-            } catch {
-              totalProcessed++;
-            }
-          }
-        }
-        offset += PAGE_SIZE;
-      }
-      showSuccess(`Resized ${totalResized} member photo(s). Refresh the Member Directory to see the changes.`);
-      logActivity('Resize Member Photos', `Resized ${totalResized} existing member photos`, 'admin');
-    } catch (error: any) {
-      showError(error?.message || 'Failed to resize photos.');
-    } finally {
-      setResizing(false);
-      setResizeProgress('');
-    }
-  };
-
-  // Run resize automatically when admin visits this page
-  useEffect(() => {
-    if (resizeRunRef.current) return;
-    resizeRunRef.current = true;
-    void handleResizePhotos();
-  }, []);
-
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
