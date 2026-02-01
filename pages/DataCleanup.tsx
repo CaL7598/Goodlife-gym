@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserRole } from '../types';
 import { Trash2, AlertTriangle, ShieldAlert, ImageIcon } from 'lucide-react';
 import { 
@@ -19,7 +19,6 @@ import ConfirmModal from '../components/ConfirmModal';
 
 interface DataCleanupProps {
   role: UserRole;
-  setMembers: React.Dispatch<React.SetStateAction<any[]>>;
   setActivityLogs: React.Dispatch<React.SetStateAction<any[]>>;
   setAttendanceRecords: React.Dispatch<React.SetStateAction<any[]>>;
   setPayments: React.Dispatch<React.SetStateAction<any[]>>;
@@ -47,6 +46,7 @@ const DataCleanup: React.FC<DataCleanupProps> = ({
   const [confirm, setConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [resizing, setResizing] = useState(false);
   const [resizeProgress, setResizeProgress] = useState('');
+  const resizeRunRef = useRef(false);
 
   if (role !== UserRole.SUPER_ADMIN) {
     return (
@@ -228,6 +228,13 @@ const DataCleanup: React.FC<DataCleanupProps> = ({
       setResizeProgress('');
     }
   };
+
+  // Run resize automatically when admin visits this page
+  useEffect(() => {
+    if (resizeRunRef.current) return;
+    resizeRunRef.current = true;
+    void handleResizePhotos();
+  }, []);
 
   return (
     <div className="space-y-6">
