@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Member, UserRole, SubscriptionPlan } from '../types';
 import { Search, Plus, Edit2, Trash2, Filter, ChevronLeft, ChevronRight, X, Upload, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
 import { sendWelcomeEmail } from '../lib/emailService';
+import { sendWelcomeSMS } from '../lib/smsService';
 import { membersService } from '../lib/database';
 import { resizeImageForUpload, resizeBase64Image } from '../lib/imageUtils';
 import { useToast } from '../contexts/ToastContext';
@@ -308,23 +309,27 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       setHasMorePages(hasMore);
     }).catch(() => {});
     logActivity('Register Member', `Created profile for ${createdMember.fullName} (${createdMember.plan})`, 'admin');
-    
-    // Send welcome email
-    if (createdMember.email) {
-      const emailSent = await sendWelcomeEmail({
+
+    // Send welcome SMS (phone is required for registration)
+    if (createdMember.phone) {
+      await sendWelcomeSMS({
         memberName: createdMember.fullName,
-        memberEmail: createdMember.email,
-        memberPhone: createdMember.phone, // Include phone for SMS
+        memberPhone: createdMember.phone,
         plan: createdMember.plan,
         startDate: createdMember.startDate,
         expiryDate: createdMember.expiryDate
       });
-      
-      if (emailSent) {
-        console.log(`Welcome email and SMS sent to ${createdMember.email}`);
-      } else {
-        console.warn(`Failed to send welcome email to ${createdMember.email}`);
-      }
+    }
+    // Optionally send welcome email if member has email
+    if (createdMember.email) {
+      await sendWelcomeEmail({
+        memberName: createdMember.fullName,
+        memberEmail: createdMember.email,
+        memberPhone: createdMember.phone,
+        plan: createdMember.plan,
+        startDate: createdMember.startDate,
+        expiryDate: createdMember.expiryDate
+      });
     }
     
     setShowAddModal(false);
@@ -550,12 +555,22 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
           setMembers(prev => [...prev, createdMember]);
           logActivity('Bulk Import', `Imported ${createdMember.fullName} (${createdMember.plan})`, 'admin');
 
-          // Send welcome email only if not skipped
+          // Send welcome SMS (phone required)
+          if (!skipWelcomeEmails && createdMember.phone) {
+            await sendWelcomeSMS({
+              memberName: createdMember.fullName,
+              memberPhone: createdMember.phone,
+              plan: createdMember.plan,
+              startDate: createdMember.startDate,
+              expiryDate: createdMember.expiryDate
+            });
+          }
+          // Optionally send welcome email if member has email
           if (!skipWelcomeEmails && createdMember.email) {
             await sendWelcomeEmail({
               memberName: createdMember.fullName,
               memberEmail: createdMember.email,
-              memberPhone: createdMember.phone, // Include phone for SMS
+              memberPhone: createdMember.phone,
               plan: createdMember.plan,
               startDate: createdMember.startDate,
               expiryDate: createdMember.expiryDate

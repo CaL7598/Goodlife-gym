@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PaymentRecord, UserRole, Member, PaymentMethod, PaymentStatus, SubscriptionPlan, StaffMember } from '../types';
 import { CreditCard, Smartphone, CheckCircle, Search, Filter, History, X, UserPlus, AlertCircle, RefreshCw } from 'lucide-react';
 import { sendPaymentEmail, sendWelcomeEmail } from '../lib/emailService';
+import { sendWelcomeSMS } from '../lib/smsService';
 import { membersService, paymentsService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import { calculateExpiryDate } from '../lib/dateUtils';
@@ -211,20 +212,26 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             
             logActivity('Confirm Payment & Create Member', `Verified ${pay.method} payment of ₵${pay.amount} and ${existingMember ? 'linked to existing' : 'created'} member ${pay.memberName}`, 'financial');
             
-            // Send welcome email only if member was just created
-            if (!existingMember && createdMember.email) {
-              const emailSent = await sendWelcomeEmail({
+            // Send welcome SMS when member is just created (phone is required)
+            if (!existingMember && createdMember.phone) {
+              await sendWelcomeSMS({
                 memberName: createdMember.fullName,
-                memberEmail: createdMember.email,
-                memberPhone: createdMember.phone, // Include phone for SMS
+                memberPhone: createdMember.phone,
                 plan: createdMember.plan,
                 startDate: createdMember.startDate,
                 expiryDate: createdMember.expiryDate
               });
-              
-              if (emailSent) {
-                console.log(`Welcome email and SMS sent to ${createdMember.email}`);
-              }
+            }
+            // Optionally send welcome email if member has email
+            if (!existingMember && createdMember.email) {
+              await sendWelcomeEmail({
+                memberName: createdMember.fullName,
+                memberEmail: createdMember.email,
+                memberPhone: createdMember.phone,
+                plan: createdMember.plan,
+                startDate: createdMember.startDate,
+                expiryDate: createdMember.expiryDate
+              });
             }
             
             // Send payment confirmation email

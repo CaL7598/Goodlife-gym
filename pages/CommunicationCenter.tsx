@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Member } from '../types';
-import { Send, MessageSquare, Mail, History, Users, CheckSquare, Square } from 'lucide-react';
+import { Send, MessageSquare, History, Users, CheckSquare, Square } from 'lucide-react';
 // AI Auto-Draft feature disabled
 // import { generateCommunication } from '../geminiService';
-import { sendMessageEmail, sendBulkMessageEmails } from '../lib/emailService';
+import { sendMessageSMS, sendBulkMessageSMS } from '../lib/smsService';
 import { useToast } from '../contexts/ToastContext';
 
 const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
@@ -79,17 +79,15 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
 
     if (sendMode === 'single') {
       if (!selectedMember) return;
-      
-      // Get subject based on message type
-      const subject = getSubjectForType(msgType, selectedMember.fullName);
-      
-      // Send email via Resend
+      if (!selectedMember.phone || !selectedMember.phone.trim()) {
+        showError(`${selectedMember.fullName} has no phone number. SMS cannot be sent.`);
+        return;
+      }
+
       try {
-        const result = await sendMessageEmail({
+        const result = await sendMessageSMS({
           memberName: selectedMember.fullName,
-          memberEmail: selectedMember.email,
-          memberPhone: selectedMember.phone, // Include phone for SMS
-          subject: subject,
+          memberPhone: selectedMember.phone,
           message: message,
           messageType: msgType
         });
@@ -101,22 +99,21 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
           date: new Date().toLocaleString(),
           preview: message.substring(0, 60) + '...',
           mode: 'single',
-          emailSent: result.success
+          smsSent: result.success
         };
         setHistory([newEntry, ...history]);
         setMessage('');
-        
+
         if (result.success) {
-          showSuccess(`Email and SMS sent successfully to ${selectedMember.fullName}`);
+          showSuccess(`SMS sent successfully to ${selectedMember.fullName}`);
         } else {
           const error = result.error;
           const errorMsg = error?.error || error?.message || 'Unknown error';
-          showError(`Failed to send email to ${selectedMember.fullName}: ${errorMsg}`);
+          showError(`Failed to send SMS to ${selectedMember.fullName}: ${errorMsg}`);
         }
       } catch (error: any) {
-        console.error('Email sending error:', error);
-        const errorMsg = error?.message || 'Failed to send email';
-        showError(`Failed to send email to ${selectedMember.fullName}: ${errorMsg}`);
+        console.error('SMS sending error:', error);
+        showError(`Failed to send SMS to ${selectedMember.fullName}: ${error?.message || 'Unknown error'}`);
       }
     } else {
       // Broadcast mode
@@ -126,58 +123,43 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
       }
 
       const recipients = selectAll ? members : members.filter(m => selectedMemberIds.has(m.id));
-      
-      // Prepare email data for all recipients
-      const emailData = recipients
-        .filter(m => m.email) // Only include members with email addresses
-        .map(member => ({
-          memberName: member.fullName,
-          memberEmail: member.email,
-          memberPhone: member.phone, // Include phone for SMS
-          subject: getSubjectForType(msgType, member.fullName),
-          message: message,
-          messageType: msgType as 'welcome' | 'reminder' | 'expiry' | 'general'
-        }));
+      const withPhone = recipients.filter(m => m.phone && m.phone.trim());
 
-      // Send emails via Resend
-      const { success, failed } = await sendBulkMessageEmails(emailData);
+      if (withPhone.length === 0) {
+        showError("No selected members have phone numbers. SMS cannot be sent.");
+        return;
+      }
+
+      const smsData = withPhone.map(member => ({
+        memberName: member.fullName,
+        memberPhone: member.phone!,
+        message: message,
+        messageType: msgType as 'welcome' | 'reminder' | 'expiry' | 'general'
+      }));
+
+      const { success, failed } = await sendBulkMessageSMS(smsData);
 
       const newEntry = {
         id: Date.now(),
-        to: selectAll ? `All Members (${members.length})` : `${recipients.length} Members`,
+        to: selectAll ? `All Members (${withPhone.length})` : `${recipients.length} Members`,
         type: msgType,
         date: new Date().toLocaleString(),
         preview: message.substring(0, 60) + '...',
         mode: 'broadcast',
-        recipients: recipients.map(m => m.fullName).join(', '),
-        emailSent: success,
-        emailFailed: failed
+        recipients: withPhone.map(m => m.fullName).join(', '),
+        smsSent: success,
+        smsFailed: failed
       };
       setHistory([newEntry, ...history]);
       setMessage('');
       setSelectedMemberIds(new Set());
       setSelectAll(false);
-      
-      if (failed === 0) {
-        showSuccess(`Emails and SMS sent successfully to ${success} member(s)`);
-      } else {
-        showError(`Emails sent to ${success} member(s), ${failed} failed. Please check the console for details.`);
-      }
-    }
-  };
 
-  const getSubjectForType = (type: string, memberName: string): string => {
-    switch (type) {
-      case 'welcome':
-        return `Welcome to Goodlife Fitness, ${memberName}!`;
-      case 'reminder':
-        return `Subscription Reminder - Goodlife Fitness`;
-      case 'expiry':
-        return `Important: Your Membership Expiry Notice`;
-      case 'general':
-        return `Message from Goodlife Fitness`;
-      default:
-        return `Message from Goodlife Fitness`;
+      if (failed === 0) {
+        showSuccess(`SMS sent successfully to ${success} member(s)`);
+      } else {
+        showError(`SMS sent to ${success} member(s), ${failed} failed.`);
+      }
     }
   };
 
@@ -190,7 +172,7 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Communication Center</h2>
-          <p className="text-slate-500 text-sm">Draft and send personalized messages to gym members.</p>
+          <p className="text-slate-500 text-sm">Send SMS messages to gym members.</p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
