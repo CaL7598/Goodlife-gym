@@ -64,10 +64,6 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
       setError('Please fill in all required fields (Full Name and Phone)');
       return;
     }
-    if (!memberData.photo) {
-      setError('Please upload your photo. Photo is required for registration.');
-      return;
-    }
     setError('');
     setStep('momo-instructions');
   };

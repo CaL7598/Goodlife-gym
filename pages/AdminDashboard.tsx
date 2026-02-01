@@ -16,8 +16,7 @@ import {
   DollarSign,
   Filter,
   Bell,
-  UserPlus,
-  ImageIcon
+  UserPlus
 } from 'lucide-react';
 import { membersService } from '../lib/database';
 import { resizeBase64Image } from '../lib/imageUtils';
@@ -64,8 +63,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({
   const { showSuccess, showError } = useToast();
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [resizingPhotos, setResizingPhotos] = useState(false);
-  const [resizeProgress, setResizeProgress] = useState('');
   const [revenuePeriod, setRevenuePeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   const [showCustomRange, setShowCustomRange] = useState(false);
@@ -336,77 +333,8 @@ const AdminDashboard: React.FC<DashboardProps> = ({
     return pendingPayments.filter(p => p.isPendingMember);
   }, [pendingPayments]);
 
-  const handleResizePhotos = async () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseKey) {
-      showError('Database not configured.');
-      return;
-    }
-    setResizingPhotos(true);
-    setResizeProgress('Starting...');
-    let offset = 0;
-    const pageSize = 10;
-    let totalResized = 0;
-    try {
-      let hasMore = true;
-      while (hasMore) {
-        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset, true);
-        hasMore = more;
-        for (const m of data) {
-          if (m.photo && m.photo.startsWith('data:image')) {
-            try {
-              const resized = await resizeBase64Image(m.photo);
-              await membersService.update(m.id, { photo: resized });
-              totalResized++;
-              setResizeProgress(`Resized ${totalResized}...`);
-            } catch { /* skip */ }
-          }
-        }
-        offset += pageSize;
-      }
-      showSuccess(`Resized ${totalResized} member photo(s). Refresh Member Directory to see changes.`);
-      logActivity('Resize Member Photos', `Resized ${totalResized} existing member photos`, 'admin');
-    } catch (error: any) {
-      showError(error?.message || 'Failed to resize photos.');
-    } finally {
-      setResizingPhotos(false);
-      setResizeProgress('');
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Resize Member Photos - prominent quick action */}
-      <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4 sm:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 bg-emerald-100 rounded-lg shrink-0">
-              <ImageIcon size={24} className="text-emerald-700" />
-            </div>
-            <div>
-              <h3 className="font-bold text-emerald-900 text-base sm:text-lg">Resize Member Photos</h3>
-              <p className="text-sm text-emerald-700 mt-0.5">
-                Compress photos already in the database. Reduces storage and speeds up loading.
-              </p>
-              {resizeProgress && <p className="text-xs font-medium text-emerald-600 mt-2">{resizeProgress}</p>}
-            </div>
-          </div>
-          <button
-            onClick={handleResizePhotos}
-            disabled={resizingPhotos}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-          >
-            {resizingPhotos ? (
-              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <ImageIcon size={18} />
-            )}
-            {resizingPhotos ? 'Resizing...' : 'Resize Photos'}
-          </button>
-        </div>
-      </div>
-
       {/* Pending Payment Notifications */}
       {pendingPayments.length > 0 && (
         <div className={`rounded-xl border-2 p-3 sm:p-4 ${

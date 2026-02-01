@@ -5,7 +5,7 @@ import { Search, Plus, Edit2, Trash2, Filter, ChevronLeft, ChevronRight, X, Uplo
 import { sendWelcomeEmail } from '../lib/emailService';
 import { sendWelcomeSMS } from '../lib/smsService';
 import { membersService } from '../lib/database';
-import { resizeImageForUpload, resizeBase64Image } from '../lib/imageUtils';
+import { resizeImageForUpload } from '../lib/imageUtils';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { calculateExpiryDate } from '../lib/dateUtils';
@@ -62,8 +62,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   const [displayMembers, setDisplayMembers] = useState<Member[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [resizingPhotos, setResizingPhotos] = useState(false);
-  const [resizeProgress, setResizeProgress] = useState('');
 
   const loadSearch = useCallback(async (query: string) => {
     if (!query.trim()) return;
@@ -717,49 +715,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     showSuccess(`Member ${memberToDelete?.fullName} deleted successfully`);
   };
 
-  const handleResizePhotos = async () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseKey) {
-      showError('Database not configured.');
-      return;
-    }
-    setResizingPhotos(true);
-    setResizeProgress('Starting...');
-    let offset = 0;
-    const pageSize = 10;
-    let totalResized = 0;
-    try {
-      let hasMore = true;
-      while (hasMore) {
-        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset, true);
-        hasMore = more;
-        for (const m of data) {
-          if (m.photo && m.photo.startsWith('data:image')) {
-            try {
-              const resized = await resizeBase64Image(m.photo);
-              await membersService.update(m.id, { photo: resized });
-              totalResized++;
-              setResizeProgress(`Resized ${totalResized}...`);
-            } catch { /* skip */ }
-          }
-        }
-        offset += pageSize;
-      }
-      showSuccess(`Resized ${totalResized} member photo(s).`);
-      logActivity('Resize Member Photos', `Resized ${totalResized} existing member photos`, 'admin');
-      membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, hasMore: hm }) => {
-        setDisplayMembers(data);
-        setHasMorePages(hm);
-      }).catch(() => {});
-    } catch (error: any) {
-      showError(error?.message || 'Failed to resize photos.');
-    } finally {
-      setResizingPhotos(false);
-      setResizeProgress('');
-    }
-  };
-
   return (
     <>
       {confirmModal && (
@@ -778,19 +733,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Member Directory</h2>
         <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={handleResizePhotos}
-            disabled={resizingPhotos}
-            title="Resize existing member photos to reduce storage"
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            {resizingPhotos ? (
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <ImageIcon size={20} />
-            )}
-            Resize Photos
-          </button>
           <button 
             onClick={() => setShowBulkImportModal(true)}
             className="bg-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors shadow-sm"
@@ -828,19 +770,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-            <button 
-              onClick={handleResizePhotos}
-              disabled={resizingPhotos}
-              title="Resize existing member photos"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-medium whitespace-nowrap disabled:opacity-50"
-            >
-              {resizingPhotos ? (
-                <span className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <ImageIcon size={14} />
-              )}
-              Resize Photos
-            </button>
              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-white bg-slate-100 whitespace-nowrap">
               <Filter size={14} /> Filter
              </button>
