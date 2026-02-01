@@ -65,6 +65,35 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   const [resizingPhotos, setResizingPhotos] = useState(false);
   const [resizeProgress, setResizeProgress] = useState('');
 
+  const loadSearch = useCallback(async (query: string) => {
+    if (!query.trim()) return;
+    setListLoading(true);
+    setIsSearchMode(true);
+    try {
+      const data = await membersService.search(query.trim(), 50);
+      setDisplayMembers(data);
+      setHasMorePages(false);
+    } catch {
+      setDisplayMembers([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const t = setTimeout(() => void loadSearch(searchTerm), 300);
+      return () => clearTimeout(t);
+    } else {
+      setIsSearchMode(false);
+      setListLoading(true);
+      membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, hasMore }) => {
+        setDisplayMembers(data);
+        setHasMorePages(hasMore);
+      }).catch(() => {}).finally(() => setListLoading(false));
+    }
+  }, [searchTerm, currentPage, loadSearch]);
+
   // Clear form fields on component mount (page refresh)
   useEffect(() => {
     setSearchTerm('');
@@ -919,8 +948,11 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
         </div>
 
         {/* Pagination footer - show when we have data */}
-        {!listLoading && displayMembers.length > 0 && (
-          <div className="px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+        {!listLoading && displayMembers.length > 0 && (() => {
+          const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+          const endItem = (currentPage - 1) * PAGE_SIZE + displayMembers.length;
+          return (
+          <div key="pagination" className="px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
             <div className="text-sm text-slate-600">
               {isSearchMode
                 ? `Showing 1–${displayMembers.length} of ${displayMembers.length} results`
@@ -954,7 +986,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
               )}
             </div>
           </div>
-        )}
+        );})()}
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4 p-4">

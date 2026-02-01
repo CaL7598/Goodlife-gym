@@ -336,6 +336,45 @@ const AdminDashboard: React.FC<DashboardProps> = ({
     return pendingPayments.filter(p => p.isPendingMember);
   }, [pendingPayments]);
 
+  const handleResizePhotos = async () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      showError('Database not configured.');
+      return;
+    }
+    setResizingPhotos(true);
+    setResizeProgress('Starting...');
+    let offset = 0;
+    const pageSize = 25;
+    let totalResized = 0;
+    try {
+      let hasMore = true;
+      while (hasMore) {
+        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset);
+        hasMore = more;
+        for (const m of data) {
+          if (m.photo && m.photo.startsWith('data:image')) {
+            try {
+              const resized = await resizeBase64Image(m.photo);
+              await membersService.update(m.id, { photo: resized });
+              totalResized++;
+              setResizeProgress(`Resized ${totalResized}...`);
+            } catch { /* skip */ }
+          }
+        }
+        offset += pageSize;
+      }
+      showSuccess(`Resized ${totalResized} member photo(s). Refresh Member Directory to see changes.`);
+      logActivity('Resize Member Photos', `Resized ${totalResized} existing member photos`, 'admin');
+    } catch (error: any) {
+      showError(error?.message || 'Failed to resize photos.');
+    } finally {
+      setResizingPhotos(false);
+      setResizeProgress('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Resize Member Photos - prominent quick action */}
