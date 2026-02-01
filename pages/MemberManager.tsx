@@ -312,13 +312,21 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     // Send welcome SMS (phone is required for registration)
     if (createdMember.phone) {
-      await sendWelcomeSMS({
-        memberName: createdMember.fullName,
-        memberPhone: createdMember.phone,
-        plan: createdMember.plan,
-        startDate: createdMember.startDate,
-        expiryDate: createdMember.expiryDate
-      });
+      try {
+        const smsSent = await sendWelcomeSMS({
+          memberName: createdMember.fullName,
+          memberPhone: createdMember.phone,
+          plan: createdMember.plan,
+          startDate: createdMember.startDate,
+          expiryDate: createdMember.expiryDate
+        });
+        if (!smsSent) {
+          showWarning('Member registered, but welcome SMS could not be sent. Check backend logs and VITE_API_URL.');
+        }
+      } catch (smsErr) {
+        console.error('Welcome SMS error:', smsErr);
+        showWarning('Member registered, but welcome SMS failed. Check backend is running and VITE_API_URL is set.');
+      }
     }
     // Optionally send welcome email if member has email
     if (createdMember.email) {
@@ -410,13 +418,21 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
 
     // Send welcome SMS (phone is required in the form)
     if (createdMember.phone) {
-      await sendWelcomeSMS({
-        memberName: createdMember.fullName,
-        memberPhone: createdMember.phone,
-        plan: createdMember.plan,
-        startDate: createdMember.startDate,
-        expiryDate: createdMember.expiryDate
-      });
+      try {
+        const smsSent = await sendWelcomeSMS({
+          memberName: createdMember.fullName,
+          memberPhone: createdMember.phone,
+          plan: createdMember.plan,
+          startDate: createdMember.startDate,
+          expiryDate: createdMember.expiryDate
+        });
+        if (!smsSent) {
+          showWarning('Member added, but welcome SMS could not be sent. Check backend and VITE_API_URL.');
+        }
+      } catch (smsErr) {
+        console.error('Welcome SMS error:', smsErr);
+        showWarning('Member added, but welcome SMS failed. Check backend is running and VITE_API_URL is set.');
+      }
     }
 
     setShowAddExistingModal(false);

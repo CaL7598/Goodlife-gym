@@ -20,7 +20,7 @@ interface PaymentProcessorProps {
 }
 
 const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPayments, members, setMembers, role, userEmail, staff, logActivity }) => {
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showWarning } = useToast();
   const [activeTab, setActiveTab] = useState<'history' | 'momo'>('history');
   const [showPayModal, setShowPayModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -214,13 +214,21 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
             
             // Send welcome SMS when member is just created (phone is required)
             if (!existingMember && createdMember.phone) {
-              await sendWelcomeSMS({
-                memberName: createdMember.fullName,
-                memberPhone: createdMember.phone,
-                plan: createdMember.plan,
-                startDate: createdMember.startDate,
-                expiryDate: createdMember.expiryDate
-              });
+              try {
+                const smsSent = await sendWelcomeSMS({
+                  memberName: createdMember.fullName,
+                  memberPhone: createdMember.phone,
+                  plan: createdMember.plan,
+                  startDate: createdMember.startDate,
+                  expiryDate: createdMember.expiryDate
+                });
+                if (!smsSent) {
+                  showWarning('Member created, but welcome SMS could not be sent. Check backend and VITE_API_URL.');
+                }
+              } catch (smsErr) {
+                console.error('Welcome SMS error:', smsErr);
+                showWarning('Member created, but welcome SMS failed. Check backend is running and VITE_API_URL is set.');
+              }
             }
             // Optionally send welcome email if member has email
             if (!existingMember && createdMember.email) {
