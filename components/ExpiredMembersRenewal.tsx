@@ -5,6 +5,7 @@ import { membersService, paymentsService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
 import { calculateExpiryDate } from '../lib/dateUtils';
 import { sendPaymentEmail } from '../lib/emailService';
+import { sendPaymentSMS } from '../lib/smsService';
 
 interface ExpiredMembersRenewalProps {
   members: Member[];
@@ -176,21 +177,38 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
         'financial'
       );
 
-      // Send confirmation email/SMS
-      try {
-        await sendPaymentEmail({
-          memberName: renewingMember.fullName,
-          memberEmail: renewingMember.email,
-          memberPhone: renewingMember.phone,
-          amount: renewalForm.amount,
-          paymentMethod: renewalForm.paymentMethod,
-          paymentDate: today,
-          transactionId: renewalForm.transactionId,
-          expiryDate: newExpiryDate
-        });
-      } catch (emailError) {
-        console.warn('Failed to send renewal confirmation email:', emailError);
-        // Don't fail the whole operation if email fails
+      // Send payment confirmation SMS (phone is on the member record)
+      if (renewingMember.phone) {
+        try {
+          await sendPaymentSMS({
+            memberName: renewingMember.fullName,
+            memberPhone: renewingMember.phone,
+            amount: renewalForm.amount,
+            paymentMethod: renewalForm.paymentMethod,
+            paymentDate: today,
+            transactionId: renewalForm.transactionId,
+            expiryDate: newExpiryDate
+          });
+        } catch (smsError) {
+          console.warn('Failed to send renewal confirmation SMS:', smsError);
+        }
+      }
+      // Optionally send payment confirmation email if member has email
+      if (renewingMember.email) {
+        try {
+          await sendPaymentEmail({
+            memberName: renewingMember.fullName,
+            memberEmail: renewingMember.email,
+            memberPhone: renewingMember.phone,
+            amount: renewalForm.amount,
+            paymentMethod: renewalForm.paymentMethod,
+            paymentDate: today,
+            transactionId: renewalForm.transactionId,
+            expiryDate: newExpiryDate
+          });
+        } catch (emailError) {
+          console.warn('Failed to send renewal confirmation email:', emailError);
+        }
       }
 
       showSuccess(`${renewingMember.fullName} successfully renewed! New expiry: ${new Date(newExpiryDate).toLocaleDateString()}`);

@@ -407,7 +407,18 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     // Update local state
     setMembers(prev => [...prev, createdMember]);
     logActivity('Add Existing Member', `Added existing member ${createdMember.fullName} with custom dates (${createdMember.plan})`, 'admin');
-    
+
+    // Send welcome SMS (phone is required in the form)
+    if (createdMember.phone) {
+      await sendWelcomeSMS({
+        memberName: createdMember.fullName,
+        memberPhone: createdMember.phone,
+        plan: createdMember.plan,
+        startDate: createdMember.startDate,
+        expiryDate: createdMember.expiryDate
+      });
+    }
+
     setShowAddExistingModal(false);
     setExistingMember({ fullName: '', email: '', phone: '', plan: SubscriptionPlan.MONTHLY, status: 'active', startDate: '', expiryDate: '' });
     setExistingPhotoPreview(null);
