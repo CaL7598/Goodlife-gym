@@ -184,12 +184,18 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
         </div>
 
         {!smsConfigured && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={24} />
             <div>
-              <p className="font-bold text-amber-900">SMS not configured</p>
+              <p className="font-bold text-amber-900 text-lg">SMS not configured – no messages will be sent</p>
+              <p className="text-sm text-amber-800 mt-2">
+                <strong>1.</strong> Add <code className="bg-amber-100 px-1 rounded">VITE_API_URL</code> in GitHub: Settings → Secrets → Actions → New secret. Value = your backend URL (e.g. <code className="bg-amber-100 px-1 rounded">https://your-app.onrender.com</code>).
+              </p>
               <p className="text-sm text-amber-800 mt-1">
-                Set <code className="bg-amber-100 px-1 rounded">VITE_API_URL</code> to your backend URL (e.g. https://your-app.onrender.com) in your deployment environment and rebuild. Without this, no SMS can be sent.
+                <strong>2.</strong> Ensure the backend (Render) has <code className="bg-amber-100 px-1 rounded">ARKESEL_API_KEY</code> and <code className="bg-amber-100 px-1 rounded">ARKESEL_SENDER_ID</code> set.
+              </p>
+              <p className="text-sm text-amber-800 mt-1">
+                <strong>3.</strong> Push any change to trigger a rebuild. See SMS_SETUP_STEP_BY_STEP.md for details.
               </p>
             </div>
           </div>
@@ -333,14 +339,28 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
             {members.length === 0 && (
               <p className="text-sm text-amber-600">No members in the directory. Add members first to send messages.</p>
             )}
+            {smsConfigured && members.length > 0 && (() => {
+              const whyDisabled = !message
+                ? 'Enter a message to enable Send'
+                : sendMode === 'single' && !selectedMemberId
+                  ? 'Select a recipient to enable Send'
+                  : sendMode === 'broadcast' && selectedCount === 0
+                    ? 'Select at least one member or use Select All'
+                    : null;
+              return whyDisabled ? (
+                <p className="text-xs text-slate-500">— {whyDisabled}</p>
+              ) : null;
+            })()}
             <button 
               onClick={handleSend}
               disabled={
+                !smsConfigured ||
                 !message || 
                 (sendMode === 'single' && !selectedMemberId) ||
                 (sendMode === 'broadcast' && selectedCount === 0)
               }
               title={
+                !smsConfigured ? 'SMS not configured - set VITE_API_URL' :
                 !message ? 'Enter a message first' :
                 sendMode === 'single' && !selectedMemberId ? 'Select a member first' :
                 sendMode === 'broadcast' && selectedCount === 0 ? 'Select at least one member or use Select All' :
