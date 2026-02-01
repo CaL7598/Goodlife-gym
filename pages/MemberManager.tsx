@@ -4,7 +4,7 @@ import { Member, UserRole, SubscriptionPlan } from '../types';
 import { Search, Plus, Edit2, Trash2, Filter, ChevronLeft, ChevronRight, X, Upload, AlertCircle, CheckCircle2, Image as ImageIcon, User } from 'lucide-react';
 import { sendWelcomeEmail } from '../lib/emailService';
 import { membersService } from '../lib/database';
-import { resizeImageForUpload } from '../lib/imageUtils';
+import { resizeImageForUpload, resizeBase64Image } from '../lib/imageUtils';
 import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { calculateExpiryDate } from '../lib/dateUtils';
@@ -61,6 +61,8 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   const [displayMembers, setDisplayMembers] = useState<Member[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [resizingPhotos, setResizingPhotos] = useState(false);
+  const [resizeProgress, setResizeProgress] = useState('');
 
   // Clear form fields on component mount (page refresh)
   useEffect(() => {
@@ -643,6 +645,49 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
     showSuccess(`Member ${memberToDelete?.fullName} deleted successfully`);
   };
 
+  const handleResizePhotos = async () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      showError('Database not configured.');
+      return;
+    }
+    setResizingPhotos(true);
+    setResizeProgress('Starting...');
+    let offset = 0;
+    const pageSize = 25;
+    let totalResized = 0;
+    try {
+      let hasMore = true;
+      while (hasMore) {
+        const { data, hasMore: more } = await membersService.getPaginated(pageSize, offset);
+        hasMore = more;
+        for (const m of data) {
+          if (m.photo && m.photo.startsWith('data:image')) {
+            try {
+              const resized = await resizeBase64Image(m.photo);
+              await membersService.update(m.id, { photo: resized });
+              totalResized++;
+              setResizeProgress(`Resized ${totalResized}...`);
+            } catch { /* skip */ }
+          }
+        }
+        offset += pageSize;
+      }
+      showSuccess(`Resized ${totalResized} member photo(s).`);
+      logActivity('Resize Member Photos', `Resized ${totalResized} existing member photos`, 'admin');
+      membersService.getPaginated(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE).then(({ data, hasMore: hm }) => {
+        setDisplayMembers(data);
+        setHasMorePages(hm);
+      }).catch(() => {});
+    } catch (error: any) {
+      showError(error?.message || 'Failed to resize photos.');
+    } finally {
+      setResizingPhotos(false);
+      setResizeProgress('');
+    }
+  };
+
   return (
     <>
       {confirmModal && (
@@ -660,7 +705,25 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
       <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Member Directory</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={handleResizePhotos}
+            disabled={resizingPhotos}
+            title="Resize existing member photos to reduce storage"
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {resizingPhotos ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {resizeProgress || 'Resizing...'}
+              </>
+            ) : (
+              <>
+                <ImageIcon size={20} />
+                Resize Photos
+              </>
+            )}
+          </button>
           <button 
             onClick={() => setShowBulkImportModal(true)}
             className="bg-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors shadow-sm"
