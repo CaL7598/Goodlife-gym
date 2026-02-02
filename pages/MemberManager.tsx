@@ -377,12 +377,6 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
   const handleAddExistingMember = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate photo is required
-    if (!existingMember.photo) {
-      showWarning('Photo is required. Please upload a member photo.');
-      return;
-    }
-
     // Validate dates are provided
     if (!existingMember.startDate || !existingMember.expiryDate) {
       showError('Please provide both registration date and expiry date for existing members.');
