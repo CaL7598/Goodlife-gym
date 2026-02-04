@@ -53,6 +53,25 @@ const Checkout: React.FC<CheckoutProps> = ({ selectedPlan, onBack, onSuccess, se
     );
   }
 
+  // Prevent free plan from being processed through public checkout
+  if (selectedPlan.name === SubscriptionPlan.FREE) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <AlertCircle className="mx-auto text-rose-500 mb-4" size={48} />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Plan</h2>
+          <p className="text-slate-600 mb-6">This plan is not available for public registration.</p>
+          <button
+            onClick={onBack}
+            className="px-6 py-3 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+          >
+            View Plans
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const planPrice = parseFloat(selectedPlan.price);
   // Registration fee: ₵100 for monthly/weekly plans, ₵0 for day passes
   const registrationFee = (selectedPlan.name === 'Day Morning' || selectedPlan.name === 'Day Evening') ? 0 : 100;

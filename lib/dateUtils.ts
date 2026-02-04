@@ -16,7 +16,7 @@ export function getLocalDateString(date: Date = new Date()): string {
  * @param startDate - The start date (Date object or ISO string)
  * @returns The expiry date as an ISO string (YYYY-MM-DD) or datetime (YYYY-MM-DDTHH:mm:ss) for day passes
  */
-export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | string = new Date()): string {
+export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | string = new Date()): string | null {
   // Debug logging
   console.log('[calculateExpiryDate] Input:', { plan, startDate, startDateType: typeof startDate });
   
@@ -75,6 +75,11 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
       console.log('[calculateExpiryDate] Plan: DAY_EVENING - Expires at 8:00 PM same day');
       break;
     
+    case SubscriptionPlan.FREE:
+      // Free plan: never expires - return null
+      console.log('[calculateExpiryDate] Plan: FREE - Never expires');
+      return null as any; // Return null to indicate never expires
+    
     // Legacy plans
     case SubscriptionPlan.BASIC:
     case SubscriptionPlan.PREMIUM:
@@ -128,7 +133,12 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
  * @param plan - The subscription plan (to determine if it's a day pass)
  * @returns 'active' | 'expiring' | 'expired'
  */
-export function calculateMemberStatus(expiryDate: string, plan: SubscriptionPlan): 'active' | 'expiring' | 'expired' {
+export function calculateMemberStatus(expiryDate: string | null | undefined, plan: SubscriptionPlan): 'active' | 'expiring' | 'expired' {
+  // Free plan never expires - always active
+  if (plan === SubscriptionPlan.FREE) {
+    return 'active';
+  }
+  
   if (!expiryDate) return 'active';
   
   const now = new Date();

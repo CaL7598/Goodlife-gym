@@ -80,6 +80,9 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
       case SubscriptionPlan.DAY_EVENING:
         amount = 10;
         break;
+      case SubscriptionPlan.FREE:
+        amount = 0;
+        break;
       default:
         amount = 0;
     }
@@ -106,6 +109,9 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
       case SubscriptionPlan.DAY_EVENING:
         initialAmount = 10;
         break;
+      case SubscriptionPlan.FREE:
+        initialAmount = 0;
+        break;
     }
     
     setRenewalForm({
@@ -120,8 +126,13 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
   const handleProcessRenewal = async () => {
     if (!renewingMember) return;
 
-    if (!renewalForm.plan || renewalForm.amount <= 0) {
-      showError('Please select a plan and enter a valid amount');
+    if (!renewalForm.plan) {
+      showError('Please select a plan');
+      return;
+    }
+    // Allow amount 0 only for Free plan
+    if (renewalForm.amount < 0 || (renewalForm.amount === 0 && renewalForm.plan !== SubscriptionPlan.FREE)) {
+      showError('Please enter a valid amount');
       return;
     }
 
@@ -323,7 +334,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                       Registered: {new Date(member.startDate).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-amber-600 font-medium">
-                      Expired: {new Date(member.expiryDate).toLocaleDateString()} ({member.plan})
+                      Expired: {member.plan === SubscriptionPlan.FREE || member.expiryDate === '9999-12-31' ? 'Never' : new Date(member.expiryDate).toLocaleDateString()} ({member.plan})
                     </p>
                   </div>
                 </div>
@@ -417,6 +428,9 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                   <option value={SubscriptionPlan.ONE_WEEK}>1 Week - ₵50</option>
                   <option value={SubscriptionPlan.DAY_MORNING}>Day Morning - ₵10</option>
                   <option value={SubscriptionPlan.DAY_EVENING}>Day Evening - ₵10</option>
+                  {role !== UserRole.PUBLIC && (
+                    <option value={SubscriptionPlan.FREE}>Free - ₵0</option>
+                  )}
                 </select>
               </div>
 

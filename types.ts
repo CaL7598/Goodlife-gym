@@ -34,6 +34,7 @@ export enum SubscriptionPlan {
   ONE_WEEK = '1 Week',
   DAY_MORNING = 'Day Morning',
   DAY_EVENING = 'Day Evening',
+  FREE = 'Free',
   // Legacy plans for backward compatibility
   BASIC = 'Basic',
   PREMIUM = 'Premium',
