@@ -1112,11 +1112,10 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                     )}
                   </select>
                 </div>
-                {/* Registration Fee - Only for Monthly, 2 Weeks, and 1 Week plans (not Free) */}
+                {/* Registration Fee - Only for Monthly, 2 Weeks, and 1 Week plans */}
                 {(newMember.plan === SubscriptionPlan.MONTHLY || 
                   newMember.plan === SubscriptionPlan.TWO_WEEKS || 
-                  newMember.plan === SubscriptionPlan.ONE_WEEK) && 
-                  newMember.plan !== SubscriptionPlan.FREE && (
+                  newMember.plan === SubscriptionPlan.ONE_WEEK) && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Registration Fee (GHS)</label>
                     <input 
@@ -1150,11 +1149,10 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                       })()}
                     </span>
                   </div>
-                  {/* Only show registration fee for non-day passes and non-free plans */}
+                  {/* Only show registration fee for non-day passes */}
                   {(newMember.plan === SubscriptionPlan.MONTHLY || 
                     newMember.plan === SubscriptionPlan.TWO_WEEKS || 
-                    newMember.plan === SubscriptionPlan.ONE_WEEK) && 
-                    newMember.plan !== SubscriptionPlan.FREE && (
+                    newMember.plan === SubscriptionPlan.ONE_WEEK) && (
                     <div className="flex justify-between text-sm text-slate-600">
                       <span>Registration Fee:</span>
                       <span className="font-medium">₵{registrationFee.toFixed(2)}</span>
@@ -1349,9 +1347,7 @@ const MemberManager: React.FC<MemberManagerProps> = ({ members, setMembers, role
                         <option value={SubscriptionPlan.ONE_WEEK}>1 Week (₵70)</option>
                         <option value={SubscriptionPlan.DAY_MORNING}>Day Morning (₵25)</option>
                         <option value={SubscriptionPlan.DAY_EVENING}>Day Evening (₵25)</option>
-                        {role !== UserRole.PUBLIC && (
-                          <option value={SubscriptionPlan.FREE}>Free (₵0)</option>
-                        )}
+                        <option value={SubscriptionPlan.FREE}>Free (₵0)</option>
                       </select>
                     </div>
                     <div>
