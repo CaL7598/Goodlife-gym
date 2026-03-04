@@ -330,6 +330,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-900 truncate">{member.fullName}</p>
                     <p className="text-xs text-slate-500 truncate">{member.email || '-'}</p>
+                    <p className="text-xs text-slate-500 truncate">{member.phone || '-'}</p>
                     <p className="text-xs text-slate-600 mt-1">
                       Registered: {new Date(member.startDate).toLocaleDateString()}
                     </p>
