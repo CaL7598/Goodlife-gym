@@ -33,26 +33,35 @@ function requireSupabase() {
 // Members
 export const membersService = {
   async getAll(): Promise<Member[]> {
-    // Exclude photo (large base64) and limit to avoid timeout; load photos on demand via getById
-    const { data, error } = await requireSupabase()
-      .from('members')
-      .select('id, full_name, email, phone, address, emergency_contact, plan, start_date, expiry_date, status, created_at')
-      .order('id', { ascending: false })
-      .limit(500);
-    
-    if (error) {
-      console.error('Error fetching members:', error);
-      throw error;
+    return this.getAllForCheckIn();
+  },
+
+  /** Fetch every member (paginated) sorted A–Z for check-in and other full lists. */
+  async getAllForCheckIn(): Promise<Member[]> {
+    const cols = 'id, full_name, email, phone, address, emergency_contact, plan, start_date, expiry_date, status, created_at';
+    const pageSize = 1000;
+    const all: Member[] = [];
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await requireSupabase()
+        .from('members')
+        .select(cols)
+        .order('full_name', { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        console.error('Error fetching members for check-in:', error);
+        throw error;
+      }
+
+      const batch = (data || []).map(mapMemberFromDB);
+      all.push(...batch);
+      if (batch.length < pageSize) break;
+      offset += pageSize;
     }
-    
-    const members = (data || []).map(mapMemberFromDB);
-    // Sort by createdAt (newest first) in memory to avoid slow DB ORDER BY
-    members.sort((a, b) => {
-      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return db - da;
-    });
-    return members;
+
+    return all;
   },
 
   async getById(id: string): Promise<Member | null> {
@@ -796,23 +805,39 @@ export const attendanceService = {
 // Client Check-Ins
 export const clientCheckInService = {
   async getAll(): Promise<ClientCheckIn[]> {
-    const { data, error } = await supabase
-      .from('client_checkins')
-      .select('*')
-      .order('check_in_time', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching client check-ins:', error);
-      throw error;
+    const pageSize = 1000;
+    const all: ClientCheckIn[] = [];
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await requireSupabase()
+        .from('client_checkins')
+        .select('*')
+        .order('check_in_time', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        console.error('Error fetching client check-ins:', error);
+        throw error;
+      }
+
+      const batch = (data || []).map(mapClientCheckInFromDB);
+      all.push(...batch);
+      if (batch.length < pageSize) break;
+      offset += pageSize;
     }
-    
-    return (data || []).map(mapClientCheckInFromDB);
+
+    return all;
   },
 
   async create(checkIn: Omit<ClientCheckIn, 'id'>): Promise<ClientCheckIn> {
-    const { data, error } = await supabase
+    const payload = mapClientCheckInToDB(checkIn);
+    if (checkIn.memberId && !payload.notes) {
+      payload.notes = checkInNotesForMemberId(checkIn.memberId);
+    }
+    const { data, error } = await requireSupabase()
       .from('client_checkins')
-      .insert(mapClientCheckInToDB(checkIn))
+      .insert(payload)
       .select()
       .single();
     
@@ -825,7 +850,7 @@ export const clientCheckInService = {
   },
 
   async update(id: string, updates: Partial<ClientCheckIn>): Promise<ClientCheckIn> {
-    const { data, error } = await supabase
+    const { data, error } = await requireSupabase()
       .from('client_checkins')
       .update(mapClientCheckInToDB(updates as ClientCheckIn))
       .eq('id', id)
@@ -1331,6 +1356,17 @@ function mapAttendanceToDB(record: Partial<AttendanceRecord>): any {
   return db;
 }
 
+const MEMBER_ID_NOTE_PREFIX = 'member_id:';
+
+export function memberIdFromCheckInNotes(notes?: string | null): string | undefined {
+  if (!notes?.startsWith(MEMBER_ID_NOTE_PREFIX)) return undefined;
+  return notes.slice(MEMBER_ID_NOTE_PREFIX.length) || undefined;
+}
+
+export function checkInNotesForMemberId(memberId: string): string {
+  return `${MEMBER_ID_NOTE_PREFIX}${memberId}`;
+}
+
 function mapClientCheckInFromDB(db: any): ClientCheckIn {
   return {
     id: db.id,
@@ -1338,9 +1374,10 @@ function mapClientCheckInFromDB(db: any): ClientCheckIn {
     phone: db.phone,
     email: db.email,
     checkInTime: db.check_in_time,
-    checkOutTime: db.check_out_time,
-    date: db.date,
-    notes: db.notes
+    checkOutTime: db.check_out_time || undefined,
+    date: typeof db.date === 'string' ? db.date.split('T')[0] : db.date,
+    notes: db.notes,
+    memberId: memberIdFromCheckInNotes(db.notes),
   };
 }
 

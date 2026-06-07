@@ -151,6 +151,7 @@ export interface ClientCheckIn {
   checkOutTime?: string;
   date: string;
   notes?: string;
+  memberId?: string;
 }
 
 export interface GymEquipment {

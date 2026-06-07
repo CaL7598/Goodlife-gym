@@ -19,7 +19,6 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children, setCurrentPage, c
     { id: 'equipment', label: 'Equipment' },
     { id: 'announcements', label: 'News' },
     { id: 'contact', label: 'Contact' },
-    { id: 'checkin', label: 'Check In' },
   ];
 
   return (

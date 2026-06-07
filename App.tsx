@@ -66,7 +66,6 @@ import PrivilegeManager from './pages/PrivilegeManager';
 import StaffManager from './pages/StaffManager';
 import EquipmentManager from './pages/EquipmentManager';
 import EquipmentPostsManager from './pages/EquipmentPostsManager';
-import CheckIn from './pages/CheckIn';
 import CheckInManager from './pages/CheckInManager';
 import MaintenanceLogbook from './pages/MaintenanceLogbook';
 import ExpensesManager from './pages/ExpensesManager';
@@ -402,7 +401,6 @@ const App: React.FC = () => {
         case 'contact': return <Contact />;
         case 'equipment': return <Equipment />;
         case 'plans': return <MembershipPlans setCurrentPage={setCurrentPage} />;
-        case 'checkin': return <CheckIn />;
         case 'checkout': {
           const storedPlan = sessionStorage.getItem('selectedPlan');
           const selectedPlan = storedPlan ? JSON.parse(storedPlan) : null;
@@ -476,7 +474,14 @@ const App: React.FC = () => {
         case 'communications': return <CommunicationCenter members={members} />;
         case 'activity-logs': return <ActivityLogs logs={activityLogs} />;
         case 'attendance': return <AttendanceManager records={attendanceRecords} currentUserEmail={userEmail} role={userRole} />;
-        case 'checkins': return <CheckInManager checkIns={clientCheckIns} setCheckIns={setClientCheckIns} />;
+        case 'checkins': return (
+          <CheckInManager
+            members={members}
+            checkIns={clientCheckIns}
+            setCheckIns={setClientCheckIns}
+            logActivity={logActivity}
+          />
+        );
         case 'content': return <ContentManager 
           announcements={announcements} 
           setAnnouncements={setAnnouncements} 
