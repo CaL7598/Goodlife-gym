@@ -11,10 +11,53 @@ import {
   checkInNotesForMemberId,
 } from '../lib/database';
 
-const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+const digitsOnly = (value: string) => value.replace(/\D/g, '');
 
 const normalizeName = (name: string) =>
   name.toLowerCase().replace(/\s+/g, ' ').trim();
+
+const phoneVariants = (phone: string): string[] => {
+  const d = digitsOnly(phone);
+  if (!d) return [];
+  const variants = new Set<string>([d]);
+  if (d.startsWith('0')) variants.add(d.slice(1));
+  else variants.add(`0${d}`);
+  return [...variants];
+};
+
+const phoneMatchesQuery = (phone: string | undefined, query: string): boolean => {
+  const qDigits = digitsOnly(query);
+  if (!qDigits || qDigits.length < 2) return false;
+  const qVars = phoneVariants(query);
+  const pVars = phone ? phoneVariants(phone) : [];
+  return pVars.some(p => qVars.some(q => p.includes(q) || q.includes(p)));
+};
+
+const nameMatchesQuery = (name: string | undefined, query: string): boolean => {
+  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const n = normalizeName(name || '');
+  return words.every(word => n.includes(word));
+};
+
+const emailMatchesQuery = (email: string | undefined, query: string): boolean => {
+  if (!email || !query.trim()) return false;
+  return email.toLowerCase().includes(query.toLowerCase().trim());
+};
+
+/** Match name (any word order), phone (with/without leading 0), or email */
+const matchesClientSearch = (
+  fields: { name?: string; phone?: string; email?: string },
+  query: string
+): boolean => {
+  const q = query.trim();
+  if (!q) return true;
+  return (
+    nameMatchesQuery(fields.name, q) ||
+    phoneMatchesQuery(fields.phone, q) ||
+    emailMatchesQuery(fields.email, q)
+  );
+};
 
 const displayMemberName = (member: Member) =>
   member.fullName?.trim() || member.phone?.trim() || 'Unnamed Member';
@@ -40,7 +83,9 @@ const isVisitToday = (checkIn: ClientCheckIn, today: string) =>
 const memberMatchesCheckIn = (member: Member, checkIn: ClientCheckIn) => {
   if (checkIn.memberId) return checkIn.memberId === member.id;
   return (
-    normalizePhone(member.phone) === normalizePhone(checkIn.phone) &&
+    phoneVariants(member.phone).some(p =>
+      phoneVariants(checkIn.phone).some(cp => p === cp)
+    ) &&
     normalizeName(displayMemberName(member)) === normalizeName(checkIn.fullName || '')
   );
 };
@@ -73,6 +118,8 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
   const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState<ActiveTab>('checkin');
   const [memberSearch, setMemberSearch] = useState('');
+  const [memberSearchResults, setMemberSearchResults] = useState<Member[] | null>(null);
+  const [memberSearchLoading, setMemberSearchLoading] = useState(false);
   const [checkInMembers, setCheckInMembers] = useState<Member[]>(members);
   const [membersLoading, setMembersLoading] = useState(false);
   const [processingMemberId, setProcessingMemberId] = useState<string | null>(null);
@@ -111,6 +158,50 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
     };
     loadMembers();
   }, [showError]);
+
+  // Server-side search for accurate name/phone matching across all members
+  useEffect(() => {
+    const q = memberSearch.trim();
+    if (!q) {
+      setMemberSearchResults(null);
+      setMemberSearchLoading(false);
+      return;
+    }
+
+    setMemberSearchLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await membersService.search(q, 200);
+        setMemberSearchResults(results);
+      } catch (error) {
+        console.error('Member search error:', error);
+        setMemberSearchResults(
+          safeMembers.filter(m =>
+            matchesClientSearch(
+              { name: displayMemberName(m), phone: m.phone, email: m.email },
+              q
+            )
+          )
+        );
+      } finally {
+        setMemberSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [memberSearch, safeMembers]);
+
+  const membersForList = useMemo(() => {
+    const q = memberSearch.trim();
+    if (!q) return safeMembers;
+    if (memberSearchResults) return memberSearchResults;
+    return safeMembers.filter(m =>
+      matchesClientSearch(
+        { name: displayMemberName(m), phone: m.phone, email: m.email },
+        q
+      )
+    );
+  }, [memberSearch, memberSearchResults, safeMembers]);
 
   const loadAllCheckIns = useCallback(async () => {
     setHistoryLoading(true);
@@ -200,35 +291,27 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
     [currentlyInGymRecords]
   );
 
-  const matchesMemberSearch = useCallback((member: Member) => {
-    if (!memberSearch.trim()) return true;
-    const q = memberSearch.toLowerCase().trim();
-    const name = displayMemberName(member).toLowerCase();
-    return (
-      name.includes(q) ||
-      member.phone.includes(memberSearch.trim()) ||
-      normalizePhone(member.phone).includes(normalizePhone(memberSearch)) ||
-      (member.email && member.email.toLowerCase().includes(q))
-    );
-  }, [memberSearch]);
-
   const matchesCheckInSearch = useCallback((checkIn: ClientCheckIn) => {
-    if (!memberSearch.trim()) return true;
-    const q = memberSearch.toLowerCase().trim();
     const member = findMemberForCheckIn(checkIn);
-    if (member && matchesMemberSearch(member)) return true;
     return (
-      (checkIn.fullName || '').toLowerCase().includes(q) ||
-      checkIn.phone.includes(memberSearch.trim()) ||
-      normalizePhone(checkIn.phone).includes(normalizePhone(memberSearch))
+      matchesClientSearch(
+        { name: checkIn.fullName, phone: checkIn.phone, email: checkIn.email },
+        memberSearch
+      ) ||
+      (member
+        ? matchesClientSearch(
+            { name: displayMemberName(member), phone: member.phone, email: member.email },
+            memberSearch
+          )
+        : false)
     );
-  }, [memberSearch, findMemberForCheckIn, matchesMemberSearch]);
+  }, [memberSearch, findMemberForCheckIn]);
 
   const pendingCheckInMembers = useMemo(() => {
-    return [...safeMembers]
-      .filter(member => matchesMemberSearch(member) && !isMemberCurrentlyInGym(member))
+    return [...membersForList]
+      .filter(member => !isMemberCurrentlyInGym(member))
       .sort((a, b) => displayMemberName(a).localeCompare(displayMemberName(b)));
-  }, [safeMembers, matchesMemberSearch, isMemberCurrentlyInGym]);
+  }, [membersForList, isMemberCurrentlyInGym]);
 
   const filteredCurrentlyInGym = useMemo(
     () => currentlyInGymRecords.filter(matchesCheckInSearch),
@@ -292,12 +375,10 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
 
   const filteredCheckIns = useMemo(() => {
     return safeCheckIns.filter(ci => {
-      const q = searchTerm.toLowerCase().trim();
-      const matchesSearch = !q ||
-        ci.fullName.toLowerCase().includes(q) ||
-        ci.phone.includes(searchTerm.trim()) ||
-        normalizePhone(ci.phone).includes(normalizePhone(searchTerm)) ||
-        (ci.email && ci.email.toLowerCase().includes(q));
+      const matchesSearch = matchesClientSearch(
+        { name: ci.fullName, phone: ci.phone, email: ci.email },
+        searchTerm
+      );
 
       const matchesDateFrom = !dateFrom || ci.date >= dateFrom;
       const matchesDateTo = !dateTo || ci.date <= dateTo;
@@ -655,10 +736,10 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
             </div>
           </div>
 
-          {membersLoading && (
+          {(membersLoading || memberSearchLoading) && (
             <div className="flex items-center justify-center gap-2 text-sm text-slate-500 py-2">
               <Loader2 size={16} className="animate-spin" />
-              Loading all members...
+              {memberSearchLoading ? 'Searching members...' : 'Loading all members...'}
             </div>
           )}
 
@@ -668,13 +749,14 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
-                placeholder="Search members by name, phone, or email..."
+                placeholder="Search by name, phone (with or without 0), or email..."
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
               />
               {memberSearch && (
                 <button
+                  type="button"
                   onClick={() => setMemberSearch('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
@@ -682,6 +764,13 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
                 </button>
               )}
             </div>
+            {memberSearch.trim() && !memberSearchLoading && (
+              <p className="text-xs text-slate-500 mt-2">
+                {pendingCheckInMembers.length + filteredCurrentlyInGym.length} match
+                {pendingCheckInMembers.length + filteredCurrentlyInGym.length === 1 ? '' : 'es'} found
+                {filteredCurrentlyInGym.length > 0 && ` · ${filteredCurrentlyInGym.length} currently in gym`}
+              </p>
+            )}
           </div>
 
           {/* Split panels: pending left, checked-in right */}
@@ -704,7 +793,9 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
                     <p className="text-sm">
                       {safeMembers.length === 0
                         ? 'No members found. Add members first.'
-                        : 'Everyone is checked in or no matches found.'}
+                        : memberSearch.trim()
+                          ? `No members match "${memberSearch.trim()}". Try name, phone, or email.`
+                          : 'Everyone is currently checked in.'}
                     </p>
                   </div>
                 ) : (

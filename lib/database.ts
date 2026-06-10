@@ -179,12 +179,26 @@ export const membersService = {
     if (!query || !query.trim()) return [];
     const sanitized = query.trim().replace(/[%_]/g, '');
     const term = `%${sanitized}%`;
+    const digits = sanitized.replace(/\D/g, '');
+    const orClauses = [
+      `full_name.ilike.${term}`,
+      `email.ilike.${term}`,
+      `phone.ilike.${term}`,
+    ];
+    if (digits.length >= 2) {
+      orClauses.push(`phone.ilike.%${digits}%`);
+      if (digits.startsWith('0')) {
+        orClauses.push(`phone.ilike.%${digits.slice(1)}%`);
+      } else {
+        orClauses.push(`phone.ilike.%0${digits}%`);
+      }
+    }
     const cols = 'id, full_name, email, phone, address, emergency_contact, plan, start_date, expiry_date, status, created_at';
     const { data, error } = await requireSupabase()
       .from('members')
       .select(cols)
-      .or(`full_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`)
-      .order('id', { ascending: false })
+      .or(orClauses.join(','))
+      .order('full_name', { ascending: true })
       .limit(limit);
     if (error) {
       console.error('Error searching members:', error);
