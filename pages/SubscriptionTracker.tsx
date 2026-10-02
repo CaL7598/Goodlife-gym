@@ -1,39 +1,34 @@
 
-import React, { useMemo } from 'react';
-import { Member, UserRole } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Member, PaymentRecord, UserRole } from '../types';
 import { Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import { useToast } from '../contexts/ToastContext';
-import { calculateExpiryDate } from '../lib/dateUtils';
+import { calculateMemberStatus, formatExpiryDate } from '../lib/dateUtils';
+import RenewalModal from '../components/RenewalModal';
 
-const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: UserRole; logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void }> = ({ members, setMembers, role, logActivity }) => {
-  const { showSuccess } = useToast();
-  
+interface SubscriptionTrackerProps {
+  members: Member[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+  setPayments: React.Dispatch<React.SetStateAction<PaymentRecord[]>>;
+  role: UserRole;
+  staffEmail: string;
+  logActivity: (action: string, details: string, category: 'access' | 'admin' | 'financial') => void;
+}
+
+const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({ members, setMembers, setPayments, role, staffEmail, logActivity }) => {
+  const [renewingMember, setRenewingMember] = useState<Member | null>(null);
+
+  // Recalculate status so members due today show up without a reload
+  const membersWithStatus = useMemo(
+    () => members.map(m => ({ ...m, status: calculateMemberStatus(m.expiryDate, m.plan) })),
+    [members]
+  );
+
   const sortedMembers = useMemo(() => {
-    return [...members].sort((a, b) => {
+    return [...membersWithStatus].sort((a, b) => {
       const statusOrder = { 'expired': 0, 'expiring': 1, 'active': 2 };
       return statusOrder[a.status] - statusOrder[b.status];
     });
-  }, [members]);
-
-  const handleRenew = (id: string) => {
-    const member = members.find(m => m.id === id);
-    if (!member) return;
-    
-    const now = new Date();
-    // Get start date in local timezone to avoid UTC conversion issues
-    const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const expiryDate = calculateExpiryDate(member.plan, startDate);
-
-    setMembers(members.map(m => m.id === id ? {
-      ...m,
-      status: 'active',
-      startDate,
-      expiryDate
-    } : m));
-
-    logActivity('Manual Renewal', `Extended subscription for ${member.fullName} until ${expiryDate}`, 'admin');
-    showSuccess(`Subscription renewed successfully for ${member.fullName}!`);
-  };
+  }, [membersWithStatus]);
 
   return (
     <div className="space-y-6">
@@ -45,9 +40,9 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SummaryCard label="Needs Renewal" count={members.filter(m => m.status === 'expired').length} color="bg-rose-50 text-rose-600" icon={<XCircle />} />
-        <SummaryCard label="Expiring Soon" count={members.filter(m => m.status === 'expiring').length} color="bg-amber-50 text-amber-600" icon={<Clock />} />
-        <SummaryCard label="Healthy Status" count={members.filter(m => m.status === 'active').length} color="bg-emerald-50 text-emerald-600" icon={<CheckCircle />} />
+        <SummaryCard label="Needs Renewal" count={membersWithStatus.filter(m => m.status === 'expired').length} color="bg-rose-50 text-rose-600" icon={<XCircle />} />
+        <SummaryCard label="Expiring Soon" count={membersWithStatus.filter(m => m.status === 'expiring').length} color="bg-amber-50 text-amber-600" icon={<Clock />} />
+        <SummaryCard label="Healthy Status" count={membersWithStatus.filter(m => m.status === 'active').length} color="bg-emerald-50 text-emerald-600" icon={<CheckCircle />} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -72,7 +67,7 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
                     <span className="text-xs text-slate-500">{member.plan}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-slate-600">{member.expiryDate}</div>
+                    <div className="text-sm text-slate-600">{formatExpiryDate(member.expiryDate)}</div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
@@ -84,8 +79,8 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
                   </td>
                   <td className="px-6 py-4 text-right">
                     {member.status !== 'active' ? (
-                      <button 
-                        onClick={() => handleRenew(member.id)}
+                      <button
+                        onClick={() => setRenewingMember(member)}
                         className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 justify-end ml-auto"
                       >
                         <RefreshCw size={12} />
@@ -101,6 +96,18 @@ const SubscriptionTracker: React.FC<{ members: Member[]; setMembers: any; role: 
           </table>
         </div>
       </div>
+
+      {renewingMember && (
+        <RenewalModal
+          member={renewingMember}
+          setMembers={setMembers}
+          setPayments={setPayments}
+          role={role}
+          staffEmail={staffEmail}
+          logActivity={logActivity}
+          onClose={() => setRenewingMember(null)}
+        />
+      )}
     </div>
   );
 };

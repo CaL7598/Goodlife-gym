@@ -470,7 +470,16 @@ const App: React.FC = () => {
           staff={staff}
           logActivity={logActivity}
         />;
-        case 'subscriptions': return <SubscriptionTracker members={members} setMembers={setMembers} role={userRole} logActivity={logActivity} />;
+        case 'subscriptions': return (
+          <SubscriptionTracker
+            members={members}
+            setMembers={setMembers}
+            setPayments={setPayments}
+            role={userRole}
+            staffEmail={userEmail}
+            logActivity={logActivity}
+          />
+        );
         case 'communications': return <CommunicationCenter members={members} />;
         case 'activity-logs': return <ActivityLogs logs={activityLogs} />;
         case 'attendance': return <AttendanceManager records={attendanceRecords} currentUserEmail={userEmail} role={userRole} />;
