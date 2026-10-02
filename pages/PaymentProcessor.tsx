@@ -123,7 +123,8 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
         const now = new Date();
         const defaultStartDate = pay.memberStartDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const startDate = pay.memberStartDate || defaultStartDate;
-        const expiryDate = pay.memberExpiryDate || calculateExpiryDate(plan, startDate);
+        // Recalculate from the payment date so older pending sign-ups follow the current expiry rule
+        const expiryDate = calculateExpiryDate(plan, startDate) || pay.memberExpiryDate;
         
         const memberToCreate = {
           fullName: pay.memberName,
