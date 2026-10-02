@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { calculateMemberStatus } from './dateUtils';
+import { calculateMemberStatus, getAutoCheckOutTime } from './dateUtils';
 import { devLog } from './logger';
 import { 
   Member, 
@@ -877,6 +877,52 @@ export const clientCheckInService = {
     }
     
     return mapClientCheckInFromDB(data);
+  },
+
+  /**
+   * Checks out every client still marked as in the gym once that day's closing time has passed
+   * (e.g. members who forgot to check out). Returns the number of check-ins closed.
+   */
+  async autoCheckOutStale(now: Date = new Date()): Promise<number> {
+    const sb = requireSupabase();
+    const { data, error } = await sb
+      .from('client_checkins')
+      .select('id, date, check_in_time')
+      .is('check_out_time', null);
+
+    if (error) {
+      console.error('Error fetching open client check-ins:', error);
+      throw error;
+    }
+
+    // Group by checkout time so each day is closed with a single update
+    const idsByCheckOutTime = new Map<string, string[]>();
+    for (const row of data || []) {
+      const checkOutTime = getAutoCheckOutTime(row.date, row.check_in_time);
+      if (checkOutTime.getTime() > now.getTime()) continue;
+      const key = checkOutTime.toISOString();
+      idsByCheckOutTime.set(key, [...(idsByCheckOutTime.get(key) || []), row.id]);
+    }
+
+    let closed = 0;
+    for (const [checkOutTime, ids] of idsByCheckOutTime) {
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data: updated, error: updateError } = await sb
+          .from('client_checkins')
+          .update({ check_out_time: checkOutTime })
+          .in('id', ids.slice(i, i + 100))
+          .is('check_out_time', null) // don't overwrite a checkout made in the meantime
+          .select('id');
+
+        if (updateError) {
+          console.error('Error auto checking out client check-ins:', updateError);
+          throw updateError;
+        }
+        closed += updated?.length || 0;
+      }
+    }
+
+    return closed;
   },
 
   async delete(id: string): Promise<void> {

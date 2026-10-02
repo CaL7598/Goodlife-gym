@@ -10,54 +10,8 @@ import {
   membersService,
   checkInNotesForMemberId,
 } from '../lib/database';
-
-const digitsOnly = (value: string) => value.replace(/\D/g, '');
-
-const normalizeName = (name: string) =>
-  name.toLowerCase().replace(/\s+/g, ' ').trim();
-
-const phoneVariants = (phone: string): string[] => {
-  const d = digitsOnly(phone);
-  if (!d) return [];
-  const variants = new Set<string>([d]);
-  if (d.startsWith('0')) variants.add(d.slice(1));
-  else variants.add(`0${d}`);
-  return [...variants];
-};
-
-const phoneMatchesQuery = (phone: string | undefined, query: string): boolean => {
-  const qDigits = digitsOnly(query);
-  if (!qDigits || qDigits.length < 2) return false;
-  const qVars = phoneVariants(query);
-  const pVars = phone ? phoneVariants(phone) : [];
-  return pVars.some(p => qVars.some(q => p.includes(q) || q.includes(p)));
-};
-
-const nameMatchesQuery = (name: string | undefined, query: string): boolean => {
-  const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return true;
-  const n = normalizeName(name || '');
-  return words.every(word => n.includes(word));
-};
-
-const emailMatchesQuery = (email: string | undefined, query: string): boolean => {
-  if (!email || !query.trim()) return false;
-  return email.toLowerCase().includes(query.toLowerCase().trim());
-};
-
-/** Match name (any word order), phone (with/without leading 0), or email */
-const matchesClientSearch = (
-  fields: { name?: string; phone?: string; email?: string },
-  query: string
-): boolean => {
-  const q = query.trim();
-  if (!q) return true;
-  return (
-    nameMatchesQuery(fields.name, q) ||
-    phoneMatchesQuery(fields.phone, q) ||
-    emailMatchesQuery(fields.email, q)
-  );
-};
+import { matchesClientSearch, normalizeName, phoneVariants } from '../lib/memberSearch';
+import { GYM_CLOSING_HOUR, getAutoCheckOutTime } from '../lib/dateUtils';
 
 const displayMemberName = (member: Member) =>
   member.fullName?.trim() || member.phone?.trim() || 'Unnamed Member';
@@ -109,13 +63,24 @@ const getVisitDuration = (ci: ClientCheckIn): number | null => {
   );
 };
 
+/** Checked out by the system at closing time rather than by staff */
+const isAutoCheckedOut = (ci: ClientCheckIn) =>
+  !!ci.checkOutTime &&
+  new Date(ci.checkOutTime).getTime() === getAutoCheckOutTime(ci.date, ci.checkInTime).getTime();
+
+const closingTimeLabel = new Date(2000, 0, 1, GYM_CLOSING_HOUR).toLocaleTimeString('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
 const CheckInManager: React.FC<CheckInManagerProps> = ({
   members,
   checkIns,
   setCheckIns,
   logActivity,
 }) => {
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
   const [activeTab, setActiveTab] = useState<ActiveTab>('checkin');
   const [memberSearch, setMemberSearch] = useState('');
   const [memberSearchResults, setMemberSearchResults] = useState<Member[] | null>(null);
@@ -206,6 +171,17 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
   const loadAllCheckIns = useCallback(async () => {
     setHistoryLoading(true);
     try {
+      // Close out anyone still checked in after closing time (forgot to check out)
+      try {
+        const closed = await clientCheckInService.autoCheckOutStale();
+        if (closed > 0) {
+          showInfo(`${closed} client${closed === 1 ? '' : 's'} who didn't check out ${closed === 1 ? 'was' : 'were'} automatically checked out.`);
+          logActivity?.('Auto Check-Out', `Automatically checked out ${closed} client(s) still checked in after closing time`, 'access');
+        }
+      } catch (error) {
+        console.error('Error auto checking out clients:', error);
+      }
+
       const data = await clientCheckInService.getAll();
       setCheckIns(data);
     } catch (error: any) {
@@ -216,11 +192,7 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
     } finally {
       setHistoryLoading(false);
     }
-  }, [setCheckIns, showError]);
-
-  useEffect(() => {
-    loadAllCheckIns();
-  }, [loadAllCheckIns]);
+  }, [setCheckIns, showError, showInfo, logActivity]);
 
   useEffect(() => {
     if (activeTab === 'checkin' || activeTab === 'history') {
@@ -457,7 +429,8 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
 
     const uniqueVisitors = new Set(safeCheckIns.map(ci => ci.phone)).size;
 
-    const checkedOutVisits = safeCheckIns.filter(ci => !isActiveCheckIn(ci));
+    // Auto check-outs don't reflect real visit length, so leave them out of the average
+    const checkedOutVisits = safeCheckIns.filter(ci => !isActiveCheckIn(ci) && !isAutoCheckedOut(ci));
     const totalDuration = checkedOutVisits.reduce((sum, ci) => {
       const checkIn = new Date(ci.checkInTime).getTime();
       const checkOut = new Date(ci.checkOutTime!).getTime();
@@ -504,7 +477,9 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
         duration = Math.round((checkOut - checkIn) / 1000 / 60).toString();
       }
 
-      const status = isActiveCheckIn(ci) ? 'Checked In' : 'Checked Out';
+      const status = isActiveCheckIn(ci)
+        ? 'Checked In'
+        : isAutoCheckedOut(ci) ? 'Checked Out (Auto)' : 'Checked Out';
 
       return [ci.date, ci.fullName, ci.phone, ci.email || 'N/A', checkInTime, checkOutTime, duration, status];
     });
@@ -809,7 +784,7 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
               <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-emerald-900 text-sm">Currently In Gym</h3>
-                  <p className="text-xs text-emerald-700">Active check-ins — no checkout yet today</p>
+                  <p className="text-xs text-emerald-700">Active check-ins — auto check-out at {closingTimeLabel}</p>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold">
                   {filteredCurrentlyInGym.length}
@@ -1072,10 +1047,17 @@ const CheckInManager: React.FC<CheckInManagerProps> = ({
                             {duration !== null ? `${duration} min` : '-'}
                           </td>
                           <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${
-                              isActiveCheckIn(ci) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              {isActiveCheckIn(ci) ? 'In Gym' : 'Out'}
+                            <span
+                              title={isAutoCheckedOut(ci) ? `Automatically checked out at closing time (${closingTimeLabel})` : undefined}
+                              className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${
+                                isActiveCheckIn(ci)
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : isAutoCheckedOut(ci)
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {isActiveCheckIn(ci) ? 'In Gym' : isAutoCheckedOut(ci) ? 'Auto Out' : 'Out'}
                             </span>
                           </td>
                           <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-xs sm:text-sm">

@@ -1,11 +1,17 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Member } from '../types';
-import { Send, MessageSquare, History, Users, CheckSquare, Square, AlertCircle } from 'lucide-react';
+import { Send, MessageSquare, History, Users, CheckSquare, Square, AlertCircle, Search, X } from 'lucide-react';
 // AI Auto-Draft feature disabled
 // import { generateCommunication } from '../geminiService';
 import { sendMessageSMS, sendBulkMessageSMS, isSmsConfigured } from '../lib/smsService';
 import { useToast } from '../contexts/ToastContext';
+import { matchesClientSearch } from '../lib/memberSearch';
+
+const MAX_RECIPIENT_RESULTS = 50;
+
+const memberMatchesSearch = (member: Member, query: string) =>
+  matchesClientSearch({ name: member.fullName, phone: member.phone, email: member.email }, query);
 
 const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   const { showSuccess, showError } = useToast();
@@ -14,6 +20,9 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [showRecipientResults, setShowRecipientResults] = useState(false);
+  const [broadcastSearch, setBroadcastSearch] = useState('');
   const [msgType, setMsgType] = useState<'welcome' | 'reminder' | 'expiry' | 'general'>('reminder');
   const [message, setMessage] = useState('');
   // AI Auto-Draft feature disabled
@@ -30,6 +39,24 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
 
   const selectedMember = members.find(m => m.id === selectedMemberId);
 
+  const recipientResults = useMemo(() => {
+    const matches = members.filter(m => memberMatchesSearch(m, recipientSearch));
+    return recipientSearch.trim()
+      ? matches
+      : [...matches].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+  }, [members, recipientSearch]);
+
+  const broadcastMembers = useMemo(
+    () => members.filter(m => memberMatchesSearch(m, broadcastSearch)),
+    [members, broadcastSearch]
+  );
+
+  const selectRecipient = (member: Member) => {
+    setSelectedMemberId(member.id);
+    setRecipientSearch('');
+    setShowRecipientResults(false);
+  };
+
   // Handle select all toggle
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
@@ -42,17 +69,23 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
 
   // Handle individual member selection
   const handleMemberToggle = (memberId: string) => {
-    const newSelection = new Set(selectedMemberIds);
+    // When "select all" is on, unticking one member keeps everyone else selected
+    const newSelection = selectAll ? new Set(members.map(m => m.id)) : new Set(selectedMemberIds);
     if (newSelection.has(memberId)) {
       newSelection.delete(memberId);
-      setSelectAll(false);
     } else {
       newSelection.add(memberId);
-      // Auto-select "select all" if all members are selected
-      if (newSelection.size === members.length) {
-        setSelectAll(true);
-      }
     }
+    // Auto-select "select all" if all members are selected
+    setSelectAll(newSelection.size === members.length);
+    setSelectedMemberIds(newSelection);
+  };
+
+  // Add every member matching the current search to the selection
+  const handleSelectShown = () => {
+    const newSelection = new Set(selectedMemberIds);
+    broadcastMembers.forEach(m => newSelection.add(m.id));
+    setSelectAll(newSelection.size === members.length);
     setSelectedMemberIds(newSelection);
   };
 
@@ -162,6 +195,7 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
       setMessage('');
       setSelectedMemberIds(new Set());
       setSelectAll(false);
+      setBroadcastSearch('');
 
       if (failed === 0) {
         showSuccess(`SMS sent successfully to ${success} member(s)`);
@@ -224,6 +258,7 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
                 onClick={() => {
                   setSendMode('broadcast');
                   setSelectedMemberId('');
+                  setRecipientSearch('');
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                   sendMode === 'broadcast'
@@ -238,19 +273,97 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
           </div>
 
           {sendMode === 'single' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Recipient</label>
-                <select 
-                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
-                  value={selectedMemberId}
-                  onChange={e => setSelectedMemberId(e.target.value)}
-                >
-                  <option value="">Select Member</option>
-                  {members.map(m => (
-                    <option key={m.id} value={m.id}>{m.fullName}</option>
-                  ))}
-                </select>
+                {selectedMember ? (
+                  <div className="flex items-center justify-between gap-3 p-2.5 border border-rose-200 bg-rose-50 rounded-lg">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-slate-900 truncate">{selectedMember.fullName}</div>
+                      <div className="text-xs text-slate-500">
+                        {selectedMember.phone || 'No phone number'} · {selectedMember.plan}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMemberId('');
+                        setShowRecipientResults(true);
+                      }}
+                      className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white transition-colors"
+                      title="Change recipient"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                      type="text"
+                      className="w-full pl-9 pr-9 p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                      placeholder="Search member by name, phone, or email..."
+                      value={recipientSearch}
+                      onChange={e => {
+                        setRecipientSearch(e.target.value);
+                        setShowRecipientResults(true);
+                      }}
+                      onFocus={() => setShowRecipientResults(true)}
+                      onBlur={() => setShowRecipientResults(false)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && recipientSearch.trim() && recipientResults.length > 0) {
+                          e.preventDefault();
+                          selectRecipient(recipientResults[0]);
+                        } else if (e.key === 'Escape') {
+                          setShowRecipientResults(false);
+                        }
+                      }}
+                    />
+                    {recipientSearch && (
+                      <button
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => setRecipientSearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                    {showRecipientResults && (
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        {recipientResults.length === 0 ? (
+                          <p className="px-3 py-3 text-sm text-slate-500">
+                            {members.length === 0 ? 'No members found.' : `No members match "${recipientSearch.trim()}".`}
+                          </p>
+                        ) : (
+                          <>
+                            {recipientResults.slice(0, MAX_RECIPIENT_RESULTS).map(m => (
+                              <button
+                                type="button"
+                                key={m.id}
+                                // Keep focus on the input so the click registers before the list closes
+                                onMouseDown={e => e.preventDefault()}
+                                onClick={() => selectRecipient(m)}
+                                className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center justify-between gap-3 border-b border-slate-100 last:border-b-0"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block text-sm font-medium text-slate-900 truncate">{m.fullName}</span>
+                                  <span className="block text-xs text-slate-500">{m.phone || 'No phone number'}</span>
+                                </span>
+                                <span className="text-[10px] text-slate-400 shrink-0">{m.plan}</span>
+                              </button>
+                            ))}
+                            {recipientResults.length > MAX_RECIPIENT_RESULTS && (
+                              <p className="px-3 py-2 text-xs text-slate-400 bg-slate-50">
+                                Showing {MAX_RECIPIENT_RESULTS} of {recipientResults.length} — keep typing to narrow down
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Context</label>
@@ -282,7 +395,40 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
                 </select>
               </div>
               
-              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 max-h-64 overflow-y-auto">
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 max-h-80 overflow-y-auto">
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    className="w-full pl-9 pr-9 p-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-rose-500 outline-none"
+                    placeholder="Search members by name, phone, or email..."
+                    value={broadcastSearch}
+                    onChange={e => setBroadcastSearch(e.target.value)}
+                  />
+                  {broadcastSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+                {broadcastSearch.trim() && (
+                  <div className="flex items-center justify-between mb-3 text-xs text-slate-500">
+                    <span>{broadcastMembers.length} match{broadcastMembers.length === 1 ? '' : 'es'}</span>
+                    {!selectAll && broadcastMembers.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleSelectShown}
+                        className="font-semibold text-rose-600 hover:text-rose-700"
+                      >
+                        Select all {broadcastMembers.length} shown
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-200">
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
                     <button
@@ -302,7 +448,12 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
                   </span>
                 </div>
                 <div className="space-y-2">
-                  {members.map(member => (
+                  {broadcastMembers.length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-4">
+                      No members match &quot;{broadcastSearch.trim()}&quot;
+                    </p>
+                  )}
+                  {broadcastMembers.map(member => (
                     <label
                       key={member.id}
                       className="flex items-center gap-2 p-2 rounded hover:bg-white cursor-pointer transition-colors"
@@ -310,14 +461,13 @@ const CommunicationCenter: React.FC<{ members: Member[] }> = ({ members }) => {
                       <input
                         type="checkbox"
                         checked={selectAll || selectedMemberIds.has(member.id)}
-                        onChange={() => {
-                          if (!selectAll) {
-                            handleMemberToggle(member.id);
-                          }
-                        }}
+                        onChange={() => handleMemberToggle(member.id)}
                         className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500"
                       />
-                      <span className="text-sm text-slate-700 flex-1">{member.fullName}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm text-slate-700 truncate">{member.fullName}</span>
+                        {member.phone && <span className="block text-xs text-slate-400">{member.phone}</span>}
+                      </span>
                       <span className="text-xs text-slate-400">{member.plan}</span>
                     </label>
                   ))}

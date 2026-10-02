@@ -163,6 +163,8 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ payments, setPaymen
                 updates.plan = memberToCreate.plan;
               }
               if (memberToCreate.expiryDate && memberToCreate.expiryDate > existingMember.expiryDate) {
+                // Renewal: the new period runs from the payment date
+                updates.startDate = memberToCreate.startDate;
                 updates.expiryDate = memberToCreate.expiryDate;
               }
               if (memberToCreate.photo && !existingMember.photo) {

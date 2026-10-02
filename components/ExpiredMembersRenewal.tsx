@@ -3,7 +3,15 @@ import { Member, SubscriptionPlan, PaymentMethod, PaymentStatus, UserRole, Payme
 import { RefreshCw, X, Calendar, CreditCard, User, Phone, Mail, AlertCircle, Search } from 'lucide-react';
 import { membersService, paymentsService } from '../lib/database';
 import { useToast } from '../contexts/ToastContext';
-import { calculateExpiryDate } from '../lib/dateUtils';
+import {
+  calculateExpiryDate,
+  calculateMemberStatus,
+  formatExpiryDate,
+  getLocalDateString,
+  parseLocalDate
+} from '../lib/dateUtils';
+
+const NEVER_EXPIRES = '9999-12-31';
 import { sendPaymentEmail } from '../lib/emailService';
 import { sendPaymentSMS } from '../lib/smsService';
 
@@ -44,9 +52,11 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
     amount: 0
   });
 
-  // Get expired members
+  const today = getLocalDateString();
+
+  // Get expired members - status is recalculated so members due today appear without a reload
   const expiredMembers = useMemo(() => {
-    return members.filter(m => m.status === 'expired').sort((a, b) => 
+    return members.filter(m => calculateMemberStatus(m.expiryDate, m.plan) === 'expired').sort((a, b) => 
       new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime()
     );
   }, [members]);
@@ -144,8 +154,9 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
     setIsProcessing(true);
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const newExpiryDate = calculateExpiryDate(renewalForm.plan, today);
+      // The new period starts on the payment date, so it expires on the same date next period
+      // (e.g. paid 2 Oct → expires 2 Nov, and can be renewed again on 2 Nov)
+      const newExpiryDate = calculateExpiryDate(renewalForm.plan, today) || NEVER_EXPIRES;
 
       // Update member with new plan and dates
       const updatedMember: Member = {
@@ -153,7 +164,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
         plan: renewalForm.plan,
         startDate: today,
         expiryDate: newExpiryDate,
-        status: 'active' // Reactivate the member
+        status: calculateMemberStatus(newExpiryDate, renewalForm.plan) // Reactivate the member
       };
 
       await membersService.update(renewingMember.id, updatedMember);
@@ -222,7 +233,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
         }
       }
 
-      showSuccess(`${renewingMember.fullName} successfully renewed! New expiry: ${new Date(newExpiryDate).toLocaleDateString()}`);
+      showSuccess(`${renewingMember.fullName} successfully renewed! New expiry: ${formatExpiryDate(newExpiryDate)}`);
       setShowRenewalModal(false);
       setRenewingMember(null);
     } catch (error) {
@@ -332,10 +343,12 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                     <p className="text-xs text-slate-500 truncate">{member.email || '-'}</p>
                     <p className="text-xs text-slate-500 truncate">{member.phone || '-'}</p>
                     <p className="text-xs text-slate-600 mt-1">
-                      Registered: {new Date(member.startDate).toLocaleDateString()}
+                      Registered: {parseLocalDate(member.startDate).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-amber-600 font-medium">
-                      Expired: {member.plan === SubscriptionPlan.FREE || member.expiryDate === '9999-12-31' ? 'Never' : new Date(member.expiryDate).toLocaleDateString()} ({member.plan})
+                      {member.expiryDate?.split('T')[0] === today
+                        ? `Expires today - due for renewal (${member.plan})`
+                        : `Expired: ${member.plan === SubscriptionPlan.FREE ? 'Never' : formatExpiryDate(member.expiryDate)} (${member.plan})`}
                     </p>
                   </div>
                 </div>
@@ -401,13 +414,13 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                 </div>
                 <div className="pt-3 border-t border-amber-200">
                   <p className="text-xs text-amber-700">
-                    <strong>Registration Date:</strong> {new Date(renewingMember.startDate).toLocaleDateString()}
+                    <strong>Registration Date:</strong> {parseLocalDate(renewingMember.startDate).toLocaleDateString()}
                   </p>
                   <p className="text-xs text-amber-700 mt-1">
                     <strong>Previous Plan:</strong> {renewingMember.plan}
                   </p>
                   <p className="text-xs text-amber-700 mt-1">
-                    <strong>Expired On:</strong> {new Date(renewingMember.expiryDate).toLocaleDateString()}
+                    <strong>Expired On:</strong> {formatExpiryDate(renewingMember.expiryDate)}
                   </p>
                 </div>
               </div>
@@ -534,12 +547,8 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                 <p className="text-sm font-semibold text-emerald-900 mb-2">Renewal Summary</p>
                 <div className="space-y-1 text-sm text-emerald-700">
                   <p><strong>New Plan:</strong> {renewalForm.plan}</p>
-                  <p><strong>Start Date:</strong> {new Date().toLocaleDateString()}</p>
-                  <p><strong>New Expiry:</strong> {(() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    const expiryDate = calculateExpiryDate(renewalForm.plan, today);
-                    return new Date(expiryDate).toLocaleDateString();
-                  })()}</p>
+                  <p><strong>Start Date:</strong> {parseLocalDate(today).toLocaleDateString()} (payment date)</p>
+                  <p><strong>New Expiry:</strong> {formatExpiryDate(calculateExpiryDate(renewalForm.plan, today))}</p>
                   <p><strong>Amount:</strong> ₵{renewalForm.amount.toFixed(2)}</p>
                   <p><strong>Payment Method:</strong> {renewalForm.paymentMethod}</p>
                 </div>

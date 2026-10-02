@@ -11,6 +11,54 @@ export function getLocalDateString(date: Date = new Date()): string {
 }
 
 /**
+ * Parses a YYYY-MM-DD string as a local date (new Date('YYYY-MM-DD') would treat it as UTC)
+ */
+export function parseLocalDate(value: string): Date {
+  const parts = value.split('T')[0].split('-');
+  if (parts.length === 3) {
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  }
+  return new Date(value);
+}
+
+/**
+ * Formats a stored expiry date for display ('Never' for Free plan / far-future dates)
+ */
+export function formatExpiryDate(expiryDate: string | null | undefined): string {
+  if (!expiryDate || expiryDate.startsWith('9999-12-31')) return 'Never';
+  return parseLocalDate(expiryDate).toLocaleDateString();
+}
+
+/**
+ * Adds months without spilling into the following month,
+ * e.g. 31 Jan + 1 month = 28/29 Feb (not 2/3 Mar)
+ */
+function addMonthsClamped(date: Date, months: number): void {
+  const day = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  date.setDate(Math.min(day, lastDayOfMonth));
+}
+
+/** Gym closing time (8:00 PM). Clients still checked in after this are checked out automatically. */
+export const GYM_CLOSING_HOUR = 20;
+
+/**
+ * When a check-in that was never closed should be automatically checked out:
+ * closing time on the visit day, or the end of that day for check-ins made after closing.
+ * MIGRATION_AUTO_CHECKOUT_CLIENT_CHECKINS.sql applies the same rule in the database.
+ */
+export function getAutoCheckOutTime(visitDate: string | undefined, checkInTime: string): Date {
+  const day = visitDate ? parseLocalDate(visitDate) : new Date(checkInTime);
+  const closing = new Date(day.getFullYear(), day.getMonth(), day.getDate(), GYM_CLOSING_HOUR, 0, 0, 0);
+  if (new Date(checkInTime).getTime() >= closing.getTime()) {
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 0);
+  }
+  return closing;
+}
+
+/**
  * Calculates the expiry date based on the subscription plan and start date
  * @param plan - The subscription plan
  * @param startDate - The start date (Date object or ISO string)
@@ -45,8 +93,8 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
 
   switch (plan) {
     case SubscriptionPlan.MONTHLY:
-      // Add 1 month
-      expiry.setMonth(expiry.getMonth() + 1);
+      // Add 1 month - expires on the same day of the month as the payment (e.g. 2 Oct → 2 Nov)
+      addMonthsClamped(expiry, 1);
       console.log('[calculateExpiryDate] Plan: MONTHLY - Added 1 month');
       break;
     
@@ -84,20 +132,20 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
     case SubscriptionPlan.BASIC:
     case SubscriptionPlan.PREMIUM:
       // Add 1 month
-      expiry.setMonth(expiry.getMonth() + 1);
+      addMonthsClamped(expiry, 1);
       console.log('[calculateExpiryDate] Plan: BASIC/PREMIUM - Added 1 month');
       break;
-    
+
     case SubscriptionPlan.VIP:
       // Add 6 months
-      expiry.setMonth(expiry.getMonth() + 6);
+      addMonthsClamped(expiry, 6);
       console.log('[calculateExpiryDate] Plan: VIP - Added 6 months');
       break;
     
     default:
       // Default to 1 month if plan is unknown
       console.warn('[calculateExpiryDate] Unknown plan:', plan, '- defaulting to 1 month');
-      expiry.setMonth(expiry.getMonth() + 1);
+      addMonthsClamped(expiry, 1);
       break;
   }
 
@@ -149,18 +197,9 @@ export function calculateMemberStatus(expiryDate: string | null | undefined, pla
     // Datetime format (day passes)
     expiry = new Date(expiryDate);
   } else {
-    // Date-only format - set to end of day (23:59:59) for comparison
-    const dateParts = expiryDate.split('-');
-    if (dateParts.length === 3) {
-      expiry = new Date(
-        parseInt(dateParts[0]),
-        parseInt(dateParts[1]) - 1,
-        parseInt(dateParts[2]),
-        23, 59, 59, 999 // End of day
-      );
-    } else {
-      expiry = new Date(expiryDate);
-    }
+    // Date-only format - the membership expires at the start of the expiry day, so a member
+    // who paid on 2 Oct is due on 2 Nov and can be renewed that same day
+    expiry = parseLocalDate(expiryDate);
   }
   
   // Check if expired
