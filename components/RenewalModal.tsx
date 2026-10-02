@@ -110,8 +110,8 @@ const RenewalModal: React.FC<RenewalModalProps> = ({
     setIsProcessing(true);
 
     try {
-      // The new period starts on the payment date, so it expires on the same date next period
-      // (e.g. paid 2 Oct → expires 2 Nov, and can be renewed again on 2 Nov)
+      // The new period starts on the payment date and includes it
+      // (e.g. paid 2 Oct → expires 1 Nov, and is renewed again on 2 Nov)
       const newExpiryDate = calculateExpiryDate(renewalForm.plan, today) || NEVER_EXPIRES;
 
       // Update member with new plan and dates

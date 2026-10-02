@@ -30,15 +30,17 @@ export function formatExpiryDate(expiryDate: string | null | undefined): string 
 }
 
 /**
- * Adds months without spilling into the following month,
- * e.g. 31 Jan + 1 month = 28/29 Feb (not 2/3 Mar)
+ * Moves the date to the last day covered by a membership of the given number of months,
+ * e.g. paid 2 Oct + 1 month = valid through 1 Nov (renews on 2 Nov).
+ * If the target month is too short (paid 31 Jan), it runs to the end of that month (28/29 Feb).
  */
-function addMonthsClamped(date: Date, months: number): void {
+function addMonthsInclusive(date: Date, months: number): void {
   const day = date.getDate();
   date.setDate(1);
   date.setMonth(date.getMonth() + months);
   const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  date.setDate(Math.min(day, lastDayOfMonth));
+  // setDate(0) is the last day of the previous month (paid 1 Mar → valid through 31 Mar)
+  date.setDate(day > lastDayOfMonth ? lastDayOfMonth : day - 1);
 }
 
 /** Gym closing time (8:00 PM). Clients still checked in after this are checked out automatically. */
@@ -93,22 +95,22 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
 
   switch (plan) {
     case SubscriptionPlan.MONTHLY:
-      // Add 1 month - expires on the same day of the month as the payment (e.g. 2 Oct → 2 Nov)
-      addMonthsClamped(expiry, 1);
+      // 1 month including the payment day (e.g. paid 2 Oct → expires 1 Nov, renews 2 Nov)
+      addMonthsInclusive(expiry, 1);
       console.log('[calculateExpiryDate] Plan: MONTHLY - Added 1 month');
       break;
     
     case SubscriptionPlan.TWO_WEEKS:
-      // Add 14 days
+      // 14 days including the payment day (e.g. paid 2 Oct → expires 15 Oct)
       const beforeDate = expiry.getDate();
-      expiry.setDate(expiry.getDate() + 14);
-      console.log('[calculateExpiryDate] Plan: TWO_WEEKS - Added 14 days (', beforeDate, '→', expiry.getDate(), ')');
+      expiry.setDate(expiry.getDate() + 13);
+      console.log('[calculateExpiryDate] Plan: TWO_WEEKS - 14 days (', beforeDate, '→', expiry.getDate(), ')');
       break;
     
     case SubscriptionPlan.ONE_WEEK:
-      // Add 7 days
-      expiry.setDate(expiry.getDate() + 7);
-      console.log('[calculateExpiryDate] Plan: ONE_WEEK - Added 7 days');
+      // 7 days including the payment day (e.g. paid 2 Oct → expires 8 Oct)
+      expiry.setDate(expiry.getDate() + 6);
+      console.log('[calculateExpiryDate] Plan: ONE_WEEK - 7 days');
       break;
     
     case SubscriptionPlan.DAY_MORNING:
@@ -132,20 +134,20 @@ export function calculateExpiryDate(plan: SubscriptionPlan, startDate: Date | st
     case SubscriptionPlan.BASIC:
     case SubscriptionPlan.PREMIUM:
       // Add 1 month
-      addMonthsClamped(expiry, 1);
+      addMonthsInclusive(expiry, 1);
       console.log('[calculateExpiryDate] Plan: BASIC/PREMIUM - Added 1 month');
       break;
 
     case SubscriptionPlan.VIP:
       // Add 6 months
-      addMonthsClamped(expiry, 6);
+      addMonthsInclusive(expiry, 6);
       console.log('[calculateExpiryDate] Plan: VIP - Added 6 months');
       break;
     
     default:
       // Default to 1 month if plan is unknown
       console.warn('[calculateExpiryDate] Unknown plan:', plan, '- defaulting to 1 month');
-      addMonthsClamped(expiry, 1);
+      addMonthsInclusive(expiry, 1);
       break;
   }
 
@@ -197,9 +199,10 @@ export function calculateMemberStatus(expiryDate: string | null | undefined, pla
     // Datetime format (day passes)
     expiry = new Date(expiryDate);
   } else {
-    // Date-only format - the membership expires at the start of the expiry day, so a member
-    // who paid on 2 Oct is due on 2 Nov and can be renewed that same day
+    // Date-only format - the expiry date is the last day of the membership, so it stays valid
+    // until the end of that day (paid 2 Oct → valid through 1 Nov → expired and renewable on 2 Nov)
     expiry = parseLocalDate(expiryDate);
+    expiry.setHours(23, 59, 59, 999);
   }
   
   // Check if expired

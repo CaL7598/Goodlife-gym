@@ -4,7 +4,6 @@ import { RefreshCw, X, Search } from 'lucide-react';
 import {
   calculateMemberStatus,
   formatExpiryDate,
-  getLocalDateString,
   parseLocalDate
 } from '../lib/dateUtils';
 import RenewalModal from './RenewalModal';
@@ -29,9 +28,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
   const [expiredSearchTerm, setExpiredSearchTerm] = useState('');
   const [renewingMember, setRenewingMember] = useState<Member | null>(null);
 
-  const today = getLocalDateString();
-
-  // Get expired members - status is recalculated so members due today appear without a reload
+  // Get expired members - status is recalculated so members whose last day was yesterday appear without a reload
   const expiredMembers = useMemo(() => {
     return members.filter(m => calculateMemberStatus(m.expiryDate, m.plan) === 'expired').sort((a, b) => 
       new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime()
@@ -144,9 +141,7 @@ const ExpiredMembersRenewal: React.FC<ExpiredMembersRenewalProps> = ({
                       Registered: {parseLocalDate(member.startDate).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-amber-600 font-medium">
-                      {member.expiryDate?.split('T')[0] === today
-                        ? `Expires today - due for renewal (${member.plan})`
-                        : `Expired: ${member.plan === SubscriptionPlan.FREE ? 'Never' : formatExpiryDate(member.expiryDate)} (${member.plan})`}
+                      Expired: {member.plan === SubscriptionPlan.FREE ? 'Never' : formatExpiryDate(member.expiryDate)} ({member.plan})
                     </p>
                   </div>
                 </div>

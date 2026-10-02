@@ -17,7 +17,7 @@ interface SubscriptionTrackerProps {
 const SubscriptionTracker: React.FC<SubscriptionTrackerProps> = ({ members, setMembers, setPayments, role, staffEmail, logActivity }) => {
   const [renewingMember, setRenewingMember] = useState<Member | null>(null);
 
-  // Recalculate status so members due today show up without a reload
+  // Recalculate status so it stays current without a reload
   const membersWithStatus = useMemo(
     () => members.map(m => ({ ...m, status: calculateMemberStatus(m.expiryDate, m.plan) })),
     [members]
